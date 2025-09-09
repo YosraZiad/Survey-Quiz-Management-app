@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Analytics Dashboard</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+	<div class="app">
+		<aside class="sidebar">
+			<div class="brand">
+				<div class="brand-title">Academic Platform</div>
+				<div class="brand-sub">Survey & Quiz Management</div>
+			</div>
+			<nav class="menu">
+				<a class="menu-item active" href="#">Dashboard</a>
+				<a class="menu-item" href="index.html">Survey Builder</a>
+				<a class="menu-item" href="responses.html">View Responses</a>
+				<a class="menu-item" href="analytics.html">Analytics</a>
+				<a class="menu-item" href="#">User Management</a>
+			</nav>
+		</aside>
+
+		<main class="content">
+			<header class="page-header">
+				<h1>Analytics Dashboard</h1>
+				<p class="subtitle">Track engagement, performance, and usage across your platform</p>
+			</header>
+
+			<section class="stats">
+				<div class="card stat"><div class="icon">📄</div><div><div class="num">24</div><div class="lbl">Total Surveys</div></div></div>
+				<div class="card stat"><div class="icon">📅</div><div><div class="num">38</div><div class="lbl">Surveys Response</div></div></div>
+				<div class="card stat"><div class="icon">👥</div><div><div class="num">156</div><div class="lbl">Active Users</div></div></div>
+				<div class="card stat"><div class="icon">📈</div><div><div class="num">84%</div><div class="lbl">Response Rate</div></div></div>
+			</section>
+
+			<nav class="tabs">
+				<button class="tab active">Survey Analytics</button>
+				<button class="tab">Project Analytics</button>
+				<button class="tab">User Engagement</button>
+				<button class="tab">Satisfaction</button>
+			</nav>
+
+			<section class="grid">
+				<div class="card">
+					<div class="card-title">Survey Responses Over Time</div>
+					<canvas id="chartA" height="180"></canvas>
+				</div>
+				<div class="card">
+					<div class="card-title">Completion Rates</div>
+					<canvas id="chartB" height="180"></canvas>
+				</div>
+			</section>
+		</main>
+	</div>
+
+	<script src="js/dashboard.js"></script>
+</body>
+</html>
+

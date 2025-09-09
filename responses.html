@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Survey Responses</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="css/responses.css">
+</head>
+<body>
+	<div class="app">
+		<aside class="sidebar">
+			<div class="brand">
+				<div class="brand-title">Academic Platform</div>
+				<div class="brand-sub">Survey & Quiz Management</div>
+			</div>
+			<nav class="menu">
+				<a class="menu-item" href="dashboard.html">📊 <span>Dashboard</span></a>
+				<a class="menu-item" href="index.html">📝 <span>Survey Builder</span></a>
+				<a class="menu-item active" href="#">👁️ <span>View Responses</span></a>
+				<a class="menu-item" href="analytics.html">📈 <span>Analytics</span></a>
+				<a class="menu-item" href="#">👥 <span>User Management</span></a>
+			</nav>
+		</aside>
+
+		<main class="content">
+			<header class="page-header">
+				<h1>Survey Responses</h1>
+				<p class="subtitle">View and analyze survey responses with improved readability</p>
+				<div class="actions">
+					<button class="btn" id="exportBtn">⬇️ Export</button>
+				</div>
+			</header>
+
+			<section class="toolbar">
+				<div class="search">
+					<input type="search" placeholder="Search by name or email..." />
+				</div>
+				<div class="toggles">
+					<select>
+						<option>Medium Font</option>
+						<option>Large Font</option>
+					</select>
+					<label class="switch">
+						<input type="checkbox" />
+						<span>Summary View</span>
+					</label>
+				</div>
+			</section>
+
+			<section class="stats">
+				<div class="stat"><div class="num">3</div><div class="lbl">Total Responses</div></div>
+				<div class="stat"><div class="num">4</div><div class="lbl">Average Rating</div></div>
+				<div class="stat"><div class="num">0</div><div class="lbl">Recent (24h)</div></div>
+				<div class="stat"><div class="num">95%</div><div class="lbl">Completion Rate</div></div>
+			</section>
+
+			<section class="list">
+				<div class="row">
+					<div class="name">John Smith</div>
+					<div class="meta">john.smith@university.edu</div>
+					<div class="when">Jan 15, 2024, 01:30 PM</div>
+					<button class="icon-btn">👁️</button>
+				</div>
+				<div class="row">
+					<div class="name">Sarah Johnson</div>
+					<div class="meta">sarah.j@university.edu</div>
+					<div class="when">Jan 15, 2024, 05:20 PM</div>
+					<button class="icon-btn">👁️</button>
+				</div>
+				<div class="row">
+					<div class="name">Michael Brown</div>
+					<div class="meta">mike.brown@university.edu</div>
+					<div class="when">Jan 16, 2024, 12:15 PM</div>
+					<button class="icon-btn">👁️</button>
+				</div>
+			</section>
+		</main>
+	</div>
+
+	<script src="js/responses.js"></script>
+</body>
+</html>
+

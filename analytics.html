@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Analytics & Data Analysis</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="css/analytics.css">
+</head>
+<body>
+	<div class="app">
+		<aside class="sidebar">
+			<div class="brand">
+				<div class="brand-title">Academic Platform</div>
+				<div class="brand-sub">Survey & Quiz Management</div>
+			</div>
+			<nav class="menu">
+				<a class="menu-item" href="dashboard.html">📊 <span>Dashboard</span></a>
+				<a class="menu-item" href="index.html">📝 <span>Survey Builder</span></a>
+				<a class="menu-item" href="responses.html">👁️ <span>View Responses</span></a>
+				<a class="menu-item active" href="#">📈 <span>Analytics</span></a>
+				<a class="menu-item" href="#">👥 <span>User Management</span></a>
+			</nav>
+		</aside>
+
+		<main class="content">
+			<header class="page-header">
+				<h1>Data Analytics & Demographics</h1>
+				<p class="subtitle">Analyze survey responses by demographic variables and generate insights</p>
+			</header>
+
+			<section class="filters-section">
+				<div class="filters-header">
+					<h3>Filter by Demographics</h3>
+					<button class="btn primary" id="applyFilters">Apply Filters</button>
+				</div>
+				
+				<div class="filters-grid">
+					<div class="filter-group">
+						<label>Gender</label>
+						<select id="genderFilter">
+							<option value="">All Genders</option>
+							<option value="male">Male</option>
+							<option value="female">Female</option>
+							<option value="other">Other</option>
+						</select>
+					</div>
+					
+					<div class="filter-group">
+						<label>Age Group</label>
+						<select id="ageFilter">
+							<option value="">All Ages</option>
+							<option value="18-25">18-25</option>
+							<option value="26-35">26-35</option>
+							<option value="36-45">36-45</option>
+							<option value="46-55">46-55</option>
+							<option value="55+">55+</option>
+						</select>
+					</div>
+					
+					<div class="filter-group">
+						<label>Education Level</label>
+						<select id="educationFilter">
+							<option value="">All Levels</option>
+							<option value="high-school">High School</option>
+							<option value="bachelor">Bachelor's</option>
+							<option value="master">Master's</option>
+							<option value="phd">PhD</option>
+						</select>
+					</div>
+					
+					<div class="filter-group">
+						<label>Location</label>
+						<select id="locationFilter">
+							<option value="">All Locations</option>
+							<option value="riyadh">Riyadh</option>
+							<option value="jeddah">Jeddah</option>
+							<option value="dammam">Dammam</option>
+							<option value="other">Other</option>
+						</select>
+					</div>
+					
+					<div class="filter-group">
+						<label>Survey Type</label>
+						<select id="surveyTypeFilter">
+							<option value="">All Types</option>
+							<option value="survey">Survey</option>
+							<option value="quiz">Quiz</option>
+						</select>
+					</div>
+					
+					<div class="filter-group">
+						<label>Date Range</label>
+						<input type="date" id="dateFrom" placeholder="From">
+						<input type="date" id="dateTo" placeholder="To">
+					</div>
+				</div>
+			</section>
+
+			<section class="analytics-grid">
+				<div class="analytics-card">
+					<div class="card-header">
+						<h3>Response Distribution</h3>
+						<button class="icon-btn" id="exportChart1">📊</button>
+					</div>
+					<canvas id="responseChart" height="200"></canvas>
+				</div>
+				
+				<div class="analytics-card">
+					<div class="card-header">
+						<h3>Demographic Breakdown</h3>
+						<button class="icon-btn" id="exportChart2">📊</button>
+					</div>
+					<canvas id="demographicChart" height="200"></canvas>
+				</div>
+				
+				<div class="analytics-card">
+					<div class="card-header">
+						<h3>Age Distribution</h3>
+						<button class="icon-btn" id="exportChart3">📊</button>
+					</div>
+					<canvas id="ageChart" height="200"></canvas>
+				</div>
+				
+				<div class="analytics-card">
+					<div class="card-header">
+						<h3>Education Level Analysis</h3>
+						<button class="icon-btn" id="exportChart4">📊</button>
+					</div>
+					<canvas id="educationChart" height="200"></canvas>
+				</div>
+			</section>
+
+			<section class="data-table-section">
+				<div class="table-header">
+					<h3>Filtered Data Table</h3>
+					<div class="table-actions">
+						<button class="btn" id="exportData">📥 Export Data</button>
+						<button class="btn" id="clearFilters">🔄 Clear Filters</button>
+					</div>
+				</div>
+				
+				<div class="table-container">
+					<table id="dataTable">
+						<thead>
+							<tr>
+								<th>Name</th>
+								<th>Email</th>
+								<th>Gender</th>
+								<th>Age</th>
+								<th>Education</th>
+								<th>Location</th>
+								<th>Survey Type</th>
+								<th>Score/Weight</th>
+								<th>Date</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody id="tableBody">
+							<!-- Data will be populated by JavaScript -->
+						</tbody>
+					</table>
+				</div>
+			</section>
+		</main>
+	</div>
+
+	<script src="js/analytics.js"></script>
+</body>
+</html>
