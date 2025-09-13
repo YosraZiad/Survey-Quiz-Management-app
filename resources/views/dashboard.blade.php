@@ -13,15 +13,15 @@
 	<div class="app">
 		<aside class="sidebar">
 			<div class="brand">
-				<div class="brand-title">Academic Platform</div>
+				<div class="brand-title">AQL Soft</div>
 				<div class="brand-sub">Survey & Quiz Management</div>
 			</div>
 			<nav class="menu">
 				<a class="menu-item active" href="{{ url('/dashboard') }}">Dashboard</a>
 				<a class="menu-item" href="{{ url('/') }}">Survey Builder</a>
 				<a class="menu-item" href="{{ url('/responses') }}">View Responses</a>
-				<a class="menu-item" href="{{ url('/analytics') }}">Analytics</a>
-				<a class="menu-item" href="#">User Management</a>
+				<!-- <a class="menu-item" href="{{ url('/analytics') }}">Analytics</a>
+				<a class="menu-item" href="#">User Management</a> -->
 			</nav>
 		</aside>
 

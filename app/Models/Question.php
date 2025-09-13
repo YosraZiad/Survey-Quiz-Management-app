@@ -10,13 +10,14 @@ class Question extends Model
     use HasFactory;
 
     protected $fillable = [
-        'survey_id', 'title', 'type', 'required', 'points', 'display_order', 'metadata'
+        'survey_id', 'title', 'type', 'required', 'points', 'weight', 'display_order', 'metadata'
     ];
 
     protected $casts = [
         'required' => 'boolean',
         'points' => 'integer',
         'metadata' => 'array',
+        'weight' => 'float',
     ];
 
     public function survey()

@@ -231,15 +231,15 @@
 		<!-- Sidebar -->
 		<aside class="sidebar">
 			<div class="brand">
-				<div class="brand-title">Academic Platform</div>
+				<div class="brand-title">AQL Soft</div>
 				<div class="brand-sub">Survey & Quiz Management</div>
 			</div>
 			<nav class="menu">
 				<a class="menu-item" href="{{ url('/dashboard') }}">📊 <span>Dashboard</span></a>
 				<a class="menu-item" href="{{ url('/') }}">📝 <span>Survey Builder</span></a>
 				<a class="menu-item" href="{{ url('/responses') }}">👁️ <span>View Responses</span></a>
-				<a class="menu-item" href="{{ url('/analytics') }}">📈 <span>Analytics</span></a>
-				<a class="menu-item" href="#">👥 <span>User Management</span></a>
+				<!-- <a class="menu-item" href="{{ url('/analytics') }}">📈 <span>Analytics</span></a>
+				<a class="menu-item" href="#">👥 <span>User Management</span></a> -->
 			</nav>
 		</aside>
 
@@ -352,6 +352,10 @@
 					<a class="btn" href="/preview/${survey.id}">
 						<span>👁️</span>
 						Preview
+					</a>
+					<a class="btn" href="/responses?survey=${survey.id}">
+						<span>📊</span>
+						Responses
 					</a>
 					${survey.is_published 
 						? `<a class="btn success" href="/s/${survey.id}" target="_blank">

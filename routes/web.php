@@ -20,8 +20,12 @@ Route::get('/', function () {
 Route::get('/responses', function () {
     return view('responses');
 });
-Route::get('/responses/{survey}', function (\App\Models\Survey $survey) {
-    return view('response-detail', ['surveyId' => $survey->id]);
+Route::get('/response-detail/{surveyId}', function ($surveyId) {
+    return view('response-detail', compact('surveyId'));
+});
+
+Route::get('/results', function () {
+    return view('results');
 });
 
 Route::get('/dashboard', function () {

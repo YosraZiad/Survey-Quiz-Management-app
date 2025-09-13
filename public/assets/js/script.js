@@ -62,7 +62,9 @@ function addQuestion(type) {
 		options: defaultOptions(type),
 		correctAnswer: null, // For quizzes
 		weights: {}, // For surveys - weight for each option
-		points: 1 // Default points for quizzes
+		points: {}, // For quizzes - points for each option
+		questionPoints: 1, // Default points for the question itself
+		questionWeight: 1.0 // Default weight for the question itself
 	};
 	questions.push(question);
 	renderQuestions();
@@ -153,14 +155,75 @@ function renderQuestion(q) {
 		case 'short': {
 			const input = document.createElement('input');
 			input.type = 'text';
-			input.placeholder = 'Short answer';
+			input.placeholder = 'Type your answer here...';
 			body.appendChild(input);
+			
+			// Add weight/points controls for text questions
+			const textControls = document.createElement('div');
+			textControls.className = 'text-controls';
+			textControls.style.marginTop = '10px';
+			textControls.style.padding = '8px';
+			textControls.style.background = 'rgba(15,98,254,0.05)';
+			textControls.style.borderRadius = '6px';
+			
+			const weightLabel = document.createElement('label');
+			const surveyType = document.querySelector('input[name="surveyType"]:checked').value;
+			weightLabel.innerHTML = surveyType === 'quiz' ? 'Points: ' : 'Weight: ';
+			const weightInput = document.createElement('input');
+			weightInput.type = 'number';
+			weightInput.value = surveyType === 'quiz' ? (q.questionPoints || 1) : (q.questionWeight || 1);
+			weightInput.style.marginLeft = '8px';
+			weightInput.style.width = '60px';
+			weightInput.step = surveyType === 'quiz' ? '1' : '0.1';
+			weightInput.addEventListener('input', () => {
+				if (surveyType === 'quiz') {
+					q.questionPoints = parseInt(weightInput.value) || 1;
+				} else {
+					q.questionWeight = parseFloat(weightInput.value) || 1;
+				}
+				updateSurveyStats();
+			});
+			weightLabel.appendChild(weightInput);
+			textControls.appendChild(weightLabel);
+			
+			body.appendChild(textControls);
 			break;
 		}
 		case 'long': {
-			const ta = document.createElement('textarea');
-			ta.placeholder = 'Long answer';
-			body.appendChild(ta);
+			const textarea = document.createElement('textarea');
+			textarea.placeholder = 'Type your detailed answer here...';
+			textarea.rows = 4;
+			body.appendChild(textarea);
+			
+			// Add weight/points controls for text questions
+			const textControls = document.createElement('div');
+			textControls.className = 'text-controls';
+			textControls.style.marginTop = '10px';
+			textControls.style.padding = '8px';
+			textControls.style.background = 'rgba(15,98,254,0.05)';
+			textControls.style.borderRadius = '6px';
+			
+			const weightLabel = document.createElement('label');
+			const surveyType = document.querySelector('input[name="surveyType"]:checked').value;
+			weightLabel.innerHTML = surveyType === 'quiz' ? 'Points: ' : 'Weight: ';
+			const weightInput = document.createElement('input');
+			weightInput.type = 'number';
+			weightInput.value = surveyType === 'quiz' ? (q.questionPoints || 1) : (q.questionWeight || 1);
+			weightInput.style.marginLeft = '8px';
+			weightInput.style.width = '60px';
+			weightInput.step = surveyType === 'quiz' ? '1' : '0.1';
+			weightInput.addEventListener('input', () => {
+				if (surveyType === 'quiz') {
+					q.questionPoints = parseInt(weightInput.value) || 1;
+				} else {
+					q.questionWeight = parseFloat(weightInput.value) || 1;
+				}
+				updateSurveyStats();
+			});
+			weightLabel.appendChild(weightInput);
+			textControls.appendChild(weightLabel);
+			
+			body.appendChild(textControls);
 			break;
 		}
 		case 'radio':
@@ -177,7 +240,7 @@ function renderQuestion(q) {
 				input.value = opt;
 				input.addEventListener('input', () => { q.options[idx] = input.value; });
 				
-				// Quiz: Correct answer checkbox
+				// Quiz: Correct answer checkbox and points input
 				if (currentSurveyType === 'quiz') {
 					const correctCheck = document.createElement('input');
 					correctCheck.type = 'radio';
@@ -191,7 +254,27 @@ function renderQuestion(q) {
 					correctLabel.style.fontSize = '12px';
 					correctLabel.style.color = 'var(--muted)';
 					correctLabel.insertBefore(correctCheck, correctLabel.firstChild);
+					
+					// Points input for each option
+					const pointsInput = document.createElement('input');
+					pointsInput.type = 'number';
+					pointsInput.placeholder = 'Points';
+					pointsInput.value = q.points[idx] || '';
+					pointsInput.style.width = '60px';
+					pointsInput.style.marginLeft = '8px';
+					pointsInput.addEventListener('input', () => {
+						q.points[idx] = parseInt(pointsInput.value) || 0;
+						updateSurveyStats();
+					});
+					const pointsLabel = document.createElement('label');
+					pointsLabel.textContent = 'Points:';
+					pointsLabel.style.fontSize = '12px';
+					pointsLabel.style.color = 'var(--muted)';
+					pointsLabel.style.marginLeft = '8px';
+					pointsLabel.appendChild(pointsInput);
+					
 					row.appendChild(correctLabel);
+					row.appendChild(pointsLabel);
 				}
 				
 				// Survey: Weight input
@@ -441,9 +524,16 @@ function updateSurveyStats() {
 		pointsCardEl.style.display = 'flex';
 		weightsCardEl.style.display = 'none';
 		
-		// Calculate total points
+		// Calculate total points (sum of all option points for each question)
 		const totalPoints = questions.reduce((sum, q) => {
-			return sum + (q.points || 1);
+			if (q.options && q.options.length > 0) {
+				// For questions with options, sum the points of all options
+				const questionPoints = Object.values(q.points || {}).reduce((qSum, points) => qSum + (points || 0), 0);
+				return sum + questionPoints;
+			} else {
+				// For text questions, use the question points
+				return sum + (q.questionPoints || 1);
+			}
 		}, 0);
 		totalPointsEl.textContent = totalPoints;
 		
@@ -458,9 +548,12 @@ function updateSurveyStats() {
 			if (q.options && q.options.length > 0) {
 				const questionMaxWeight = Math.max(...Object.values(q.weights || {}));
 				maxWeight += questionMaxWeight || 0;
+			} else {
+				// For text questions, add the question weight
+				maxWeight += q.questionWeight || 1;
 			}
 		});
-		maxWeightEl.textContent = maxWeight;
+		maxWeightEl.textContent = maxWeight.toFixed(1);
 	}
 }
 
@@ -654,39 +747,59 @@ async function saveSurvey({ publish = false, redirectToPreview = false } = {}) {
     try {
         const titleEl = document.getElementById('surveyTitle');
         const descEl = document.getElementById('surveyDesc');
+        const surveyType = document.querySelector('input[name="surveyType"]:checked')?.value || 'survey';
+        
         const payload = buildSurveyPayload({
             title: titleEl ? titleEl.value : 'New Survey',
             description: descEl ? descEl.value : '',
-            type: currentSurveyType || 'survey',
+            type: surveyType,
             is_published: !!publish,
         });
+
+        console.log('Sending payload:', JSON.stringify(payload, null, 2));
 
         const endpoint = currentSurveyId ? `/api/surveys/${currentSurveyId}` : '/api/surveys';
         const method = currentSurveyId ? 'PUT' : 'POST';
         const res = await fetch(endpoint, {
             method,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
             body: JSON.stringify(payload),
         });
-        if (!res.ok) throw new Error(`Save failed (${res.status})`);
+        
+        if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}));
+            console.error('Save error response:', errorData);
+            throw new Error(`Save failed (${res.status}): ${errorData.error || errorData.message || 'Unknown error'}`);
+        }
+        
         const data = await res.json();
         currentSurveyId = data.id;
 
         if (publish) {
-            const pubRes = await fetch(`/api/surveys/${currentSurveyId}/publish`, { method: 'POST' });
-            if (!pubRes.ok) throw new Error(`Publish failed (${pubRes.status})`);
+            const pubRes = await fetch(`/api/surveys/${currentSurveyId}/publish`, { 
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            if (!pubRes.ok) {
+                const pubError = await pubRes.json().catch(() => ({}));
+                throw new Error(`Publish failed (${pubRes.status}): ${pubError.error || 'Unknown error'}`);
+            }
             alert('Survey published successfully');
         } else {
             if (redirectToPreview) {
                 window.location.href = `/preview/${currentSurveyId}`;
                 return;
-            } else {
-                alert('Survey saved');
             }
+            alert('Survey saved successfully');
         }
     } catch (err) {
-        console.error(err);
-        alert('Error: ' + err.message);
+        console.error('Save error:', err);
+        alert(err.message || 'Save failed');
     }
 }
 
@@ -697,14 +810,22 @@ function buildSurveyPayload({ title, description, type, is_published }) {
             title: q.title || 'Question',
             type: q.type,
             required: !!q.required,
-            points: typeof q.points === 'number' ? q.points : undefined,
             display_order: idx,
             metadata: null,
         };
+        
+        // Add points or weight based on survey type
+        if (type === 'quiz') {
+            base.points = typeof q.questionPoints === 'number' ? q.questionPoints : 1;
+        } else {
+            base.weight = typeof q.questionWeight === 'number' ? q.questionWeight : 1;
+        }
+        
         if (q.type === 'radio' || q.type === 'checkbox' || q.type === 'dropdown') {
             base.options = (q.options || []).map((label, oIdx) => ({
                 label,
                 weight: type === 'survey' ? (q.weights?.[oIdx] ?? null) : null,
+                points: type === 'quiz' ? (q.points?.[oIdx] ?? null) : null,
                 is_correct: type === 'quiz' ? (q.correctAnswer === oIdx) : false,
                 display_order: oIdx,
             }));
@@ -786,9 +907,11 @@ async function tryLoadSurveyFromQuery(){
             type: q.type,
             title: q.title,
             required: !!q.required,
-            points: q.points ?? undefined,
+            questionPoints: q.points ?? undefined,
+            questionWeight: q.weight ?? undefined,
             options: Array.isArray(q.options) ? q.options.map(o => o.label) : [],
             weights: Array.isArray(q.options) ? q.options.map(o => (o.weight ?? null)) : [],
+            points: Array.isArray(q.options) ? q.options.map(o => (o.points ?? null)) : [],
             correctAnswer: (() => {
                 if (currentSurveyType === 'quiz' && Array.isArray(q.options)) {
                     const idx = q.options.findIndex(o => !!o.is_correct);
