@@ -30,3 +30,12 @@ Route::get('/surveys/{survey}/analytics', [ResponseController::class, 'analytics
 
 // Import questions from Word document
 Route::post('/surveys/import/word', [WordImportController::class, 'import']);
+
+// Account creation for successful users
+Route::post('/surveys/{survey}/responses/{response}/account', [ResponseController::class, 'createAccount']);
+
+// Response details
+Route::get('/responses/{response}', [ResponseController::class, 'getResponseDetails']);
+
+// Dashboard stats
+Route::get('/dashboard/stats', [\App\Http\Controllers\DashboardController::class, 'getStats']);

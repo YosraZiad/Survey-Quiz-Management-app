@@ -20,13 +20,15 @@ Route::get('/', function () {
 Route::get('/responses', function () {
     return view('responses');
 });
-Route::get('/responses/{survey}', function (\App\Models\Survey $survey) {
-    return view('response-detail', ['surveyId' => $survey->id]);
+Route::get('/response-detail/{surveyId}', function ($surveyId) {
+    return view('response-detail', compact('surveyId'));
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
+Route::get('/results', function () {
+    return view('results');
 });
+
+Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index']);
 
 Route::get('/analytics', function () {
     return view('analytics');

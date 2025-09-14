@@ -11,7 +11,7 @@ class CreateOptionsTable extends Migration
         Schema::create('options', function (Blueprint $table) {
             $table->id();
             $table->foreignId('question_id')->constrained('questions')->onDelete('cascade');
-            $table->string('label');
+            $table->string('label')->default('Option');
             $table->float('weight')->nullable(); // for surveys
             $table->boolean('is_correct')->default(false); // for quizzes
             $table->unsignedInteger('display_order')->default(0);
@@ -24,5 +24,3 @@ class CreateOptionsTable extends Migration
         Schema::dropIfExists('options');
     }
 }
-
-

@@ -14,25 +14,20 @@
 		<!-- Sidebar -->
 		<aside class="sidebar">
 			<div class="brand">
-				<div class="brand-title">Academic Platform</div>
+				<div class="brand-title"> AQL Sof</div>
 				<div class="brand-sub">Survey & Quiz Management</div>
 			</div>
 			<nav class="menu">
 				<a class="menu-item" href="{{ url('/dashboard') }}">📊 <span>Dashboard</span></a>
 				<a class="menu-item active" href="{{ url('/') }}">📝 <span>Survey Builder</span></a>
 				<a class="menu-item" href="{{ url('/responses') }}">👁️ <span>View Responses</span></a>
-				<a class="menu-item" href="{{ url('/analytics') }}">📈 <span>Analytics</span></a>
-				<a class="menu-item" href="#">👥 <span>User Management</span></a>
+				<!-- <a class="menu-item" href="#">📈 <span>Analytics</span></a>
+				<a class="menu-item" href="#">👥 <span>User Management</span></a> -->
 			</nav>
 		</aside>
 
 		<!-- Field types list -->
 		<section class="field-types">
-			<h3 class="section-title">Field Types</h3>
-			<div class="field-list" id="fieldList">
-				<!-- Cards populated by JS to keep one source of truth -->
-			</div>
-			
 			<!-- Survey Statistics -->
 			<div class="survey-stats-sidebar">
 				<h3 class="section-title">Survey Statistics</h3>
@@ -44,21 +39,19 @@
 							<div class="stat-label">Questions</div>
 						</div>
 					</div>
-					<div class="stat-card" id="pointsCard" style="display: none;">
-						<div class="stat-icon">🎯</div>
-						<div class="stat-info">
-							<div class="stat-value" id="totalPoints">0</div>
-							<div class="stat-label">Total Points</div>
-						</div>
-					</div>
-					<div class="stat-card" id="weightsCard" style="display: none;">
+					<div class="stat-card">
 						<div class="stat-icon">⚖️</div>
 						<div class="stat-info">
-							<div class="stat-value" id="maxWeight">0</div>
+							<div class="stat-value" id="totalWeight">0</div>
 							<div class="stat-label">Max Weight</div>
 						</div>
 					</div>
 				</div>
+			</div>
+
+			<h3 class="section-title">Field Types</h3>
+			<div class="field-list" id="fieldList">
+				<!-- Cards populated by JS to keep one source of truth -->
 			</div>
 		</section>
 

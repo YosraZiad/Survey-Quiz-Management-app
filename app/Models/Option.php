@@ -10,11 +10,12 @@ class Option extends Model
     use HasFactory;
 
     protected $fillable = [
-        'question_id', 'label', 'weight', 'is_correct', 'display_order'
+        'question_id', 'label', 'text', 'weight', 'points', 'is_correct', 'display_order'
     ];
 
     protected $casts = [
         'weight' => 'float',
+        'points' => 'integer',
         'is_correct' => 'boolean',
     ];
 

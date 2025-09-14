@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Answer;
-use App\Models\Option;
-use App\Models\Question;
-use App\Models\Respondent;
-use App\Models\Response as SurveyResponse;
 use App\Models\Survey;
+use App\Models\Question;
+use App\Models\Option;
+use App\Models\Response;
+use App\Models\Respondent;
+use App\Models\Answer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -15,7 +15,7 @@ class ResponseController extends Controller
 {
     public function index(Request $request, Survey $survey)
     {
-        $query = SurveyResponse::where('survey_id', $survey->id)
+        $query = Response::where('survey_id', $survey->id)
             ->with(['respondent','answers.question','answers.option'])
             ->latest();
 
@@ -40,14 +40,14 @@ class ResponseController extends Controller
 
         $data = $query->paginate(20);
 
-        $total = SurveyResponse::where('survey_id',$survey->id)->count();
-        $avgScore = round(SurveyResponse::where('survey_id',$survey->id)->avg('score') ?? 0, 2);
-        $recent = SurveyResponse::where('survey_id',$survey->id)
+        $total = Response::where('survey_id',$survey->id)->count();
+        $avgScore = round(Response::where('survey_id',$survey->id)->avg('score') ?? 0, 2);
+        $recent = Response::where('survey_id',$survey->id)
             ->where('created_at','>=', now()->subDay())
             ->count();
 
         $totalQuestions = max(1, $survey->questions()->count());
-        $allForCompletion = SurveyResponse::where('survey_id',$survey->id)
+        $allForCompletion = Response::where('survey_id',$survey->id)
             ->with('answers')
             ->get();
         $completionRate = 0;
@@ -68,25 +68,38 @@ class ResponseController extends Controller
         ];
         return response()->json(['data' => $data, 'stats' => $stats]);
     }
-    public function analytics(Survey $survey)
+    public function analytics($surveyId)
     {
-        $questions = $survey->questions()->with('options')->get();
+        $survey = Survey::findOrFail($surveyId);
+        $responses = Response::where('survey_id', $surveyId)
+            ->with(['respondent', 'answers.option'])
+            ->get();
+
+        $analytics = [
+            'total_responses' => $responses->count(),
+            'completion_rate' => 100, // Assuming all loaded responses are complete
+            'questions_analytics' => []
+        ];
+
+        $questions = Question::where('survey_id', $surveyId)->with('options')->get();
         $result = [];
+
         foreach ($questions as $q) {
             $entry = [
                 'question_id' => $q->id,
                 'title' => $q->title,
                 'type' => $q->type,
-                'total_answers' => 0,
-                'option_counts' => [],
-                'average' => null,
-                'top_values' => [],
+                'option_counts' => []
             ];
 
-            if (in_array($q->type, ['radio','checkbox','dropdown'])) {
-                $optionIds = $q->options->pluck('id');
-                $counts = Answer::whereIn('option_id', $optionIds)->select('option_id', DB::raw('count(*) as c'))
-                    ->groupBy('option_id')->pluck('c','option_id');
+            if (in_array($q->type, ['radio', 'checkbox', 'dropdown'])) {
+                $counts = Answer::where('question_id', $q->id)
+                    ->whereNotNull('option_id')
+                    ->select('option_id', DB::raw('count(*) as count'))
+                    ->groupBy('option_id')
+                    ->pluck('count', 'option_id')
+                    ->toArray();
+
                 $sum = 0;
                 foreach ($q->options as $opt) {
                     $count = (int)($counts[$opt->id] ?? 0);
@@ -98,15 +111,21 @@ class ResponseController extends Controller
                     $sum += $count;
                 }
                 $entry['total_answers'] = $sum;
-            } elseif ($q->type === 'rating') {
+            } 
+            
+            if ($q->type === 'rating') {
                 $vals = Answer::where('question_id', $q->id)->pluck('value')->filter()->map(fn($v)=> (float)$v);
                 $entry['total_answers'] = $vals->count();
                 $entry['average'] = $entry['total_answers'] > 0 ? round($vals->avg(), 2) : null;
-            } elseif (in_array($q->type, ['number'])) {
+            } 
+            
+            if (in_array($q->type, ['number'])) {
                 $vals = Answer::where('question_id', $q->id)->pluck('value')->filter()->map(fn($v)=> (float)$v);
                 $entry['total_answers'] = $vals->count();
                 $entry['average'] = $entry['total_answers'] > 0 ? round($vals->avg(), 2) : null;
-            } else {
+            } 
+            
+            if (!in_array($q->type, ['radio', 'checkbox', 'dropdown', 'rating', 'number'])) {
                 $entry['total_answers'] = Answer::where('question_id', $q->id)->count();
                 // For text-like questions, show top common answers
                 if (in_array($q->type, ['short','long'])) {
@@ -125,6 +144,18 @@ class ResponseController extends Controller
 
         return response()->json(['data' => $result]);
     }
+
+    public function show($responseId)
+    {
+        $response = Response::with(['respondent', 'answers.option', 'survey'])
+            ->findOrFail($responseId);
+
+        return response()->json([
+            'success' => true,
+            'data' => $response
+        ]);
+    }
+
     public function store(Request $request, Survey $survey)
     {
         $data = $request->validate([
@@ -140,7 +171,7 @@ class ResponseController extends Controller
                 $respondent = Respondent::create($data['respondent']);
             }
 
-            $response = SurveyResponse::create([
+            $response = Response::create([
                 'survey_id' => $survey->id,
                 'respondent_id' => $respondent->id ?? null,
             ]);
@@ -164,17 +195,26 @@ class ResponseController extends Controller
                     if ($optionId) {
                         $opt = Option::where('question_id', $question->id)->find($optionId);
                         if ($opt && $opt->is_correct) {
+                            // Use option points if available, otherwise use question points
+                            $score += (int)($opt->points ?? $question->points ?? 1);
+                        }
+                    } elseif (in_array($question->type, ['short', 'long', 'number','date','rating'])) {
+                        // For text questions, user gets full points if answered
+                        if (!empty($value) && trim($value) !== '') {
                             $score += (int)($question->points ?? 1);
                         }
-                    } elseif (in_array($question->type, ['number','date','rating'])) {
-                        // extend as needed for non-option quiz questions
                     }
                 } else { // survey weighting
                     if ($optionId) {
                         $opt = Option::where('question_id', $question->id)->find($optionId);
                         $score += (float)($opt->weight ?? 0);
+                    } elseif (in_array($question->type, ['short', 'long', 'number', 'date'])) {
+                        // For text questions, user gets full weight if answered
+                        if (!empty($value) && trim($value) !== '') {
+                            $score += (float)($question->weight ?? 1);
+                        }
                     } elseif ($question->type === 'rating') {
-                        $score += ((float)($question->metadata['weight_per_star'] ?? 1)) * ((float)$value);
+                        $score += ((float)($question->weight ?? 1)) * ((float)$value);
                     }
                 }
             }
@@ -182,6 +222,69 @@ class ResponseController extends Controller
             $response->update(['score' => $score]);
             return $response->load('answers');
         });
+    }
+
+    public function getResponseDetails($responseId)
+    {
+        try {
+            // Check if response exists
+            if (!Response::where('id', $responseId)->exists()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Response not found'
+                ], 404);
+            }
+
+            // Get basic response data
+            $response = Response::find($responseId);
+            
+            // Get survey data
+            $survey = null;
+            if ($response->survey_id) {
+                $survey = Survey::with(['questions' => function($query) {
+                    $query->with('options')->orderBy('display_order');
+                }])->find($response->survey_id);
+            }
+
+            // Get respondent data
+            $respondent = null;
+            if ($response->respondent_id) {
+                $respondent = Respondent::find($response->respondent_id);
+            }
+
+            // Get answers with their relationships
+            $answers = Answer::where('response_id', $responseId)
+                ->with(['question', 'option'])
+                ->get();
+
+            // Build response data manually
+            $responseData = [
+                'id' => $response->id,
+                'survey_id' => $response->survey_id,
+                'respondent_id' => $response->respondent_id,
+                'score' => $response->score,
+                'created_at' => $response->created_at,
+                'updated_at' => $response->updated_at,
+                'survey' => $survey,
+                'respondent' => $respondent,
+                'answers' => $answers
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $responseData
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error in getResponseDetails for response ' . $responseId . ': ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'Server error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 }
 

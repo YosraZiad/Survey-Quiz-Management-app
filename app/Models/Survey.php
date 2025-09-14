@@ -10,7 +10,7 @@ class Survey extends Model
     use HasFactory;
 
     protected $fillable = [
-        'title', 'description', 'type', 'is_published', 'metadata',
+        'title', 'description', 'type', 'is_published', 'metadata', 'survey_number',
     ];
 
     protected $casts = [
@@ -26,5 +26,16 @@ class Survey extends Model
     public function responses()
     {
         return $this->hasMany(Response::class);
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($survey) {
+            if (empty($survey->survey_number)) {
+                $survey->survey_number = static::max('survey_number') + 1;
+            }
+        });
     }
 }
