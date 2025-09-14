@@ -10,7 +10,15 @@ class Question extends Model
     use HasFactory;
 
     protected $fillable = [
-        'survey_id', 'title', 'type', 'required', 'points', 'weight', 'display_order', 'metadata'
+        'survey_id',
+        'title',
+        'description',
+        'type',
+        'required',
+        'points',
+        'weight',
+        'display_order',
+        'metadata'
     ];
 
     protected $casts = [

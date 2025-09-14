@@ -51,7 +51,18 @@
 		// keep existing email card, then append dynamic questions
 		s.questions.forEach(q=>{
 			const card = document.createElement('div'); card.className='q-card';
-			const h = document.createElement('div'); h.className='q-header'; h.textContent = q.title + (q.required?' *':''); card.appendChild(h);
+			const h = document.createElement('div'); h.className='q-header'; 
+			h.innerHTML = q.title + (q.required ? ' <span style="color: red; margin-left: 4px;">*</span>' : ''); 
+			card.appendChild(h);
+			if (q.description) {
+				const desc = document.createElement('div'); 
+				desc.className = 'q-description'; 
+				desc.style.fontSize = '14px'; 
+				desc.style.color = '#6b7280'; 
+				desc.style.marginTop = '4px';
+				desc.textContent = q.description; 
+				card.appendChild(desc);
+			}
 			const b = document.createElement('div'); b.className='q-body';
 			const name = `q_${q.id}`;
 			switch(q.type){

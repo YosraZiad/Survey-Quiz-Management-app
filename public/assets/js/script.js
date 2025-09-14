@@ -126,6 +126,23 @@ function renderQuestion(q) {
 	
 	titleContainer.appendChild(titleDisplay);
 
+	// Description container
+	const descContainer = document.createElement('div');
+	descContainer.className = 'desc-container';
+	descContainer.style.marginTop = '8px';
+	
+	const descDisplay = document.createElement('div');
+	descDisplay.className = 'q-desc-display';
+	descDisplay.textContent = q.description || 'Click to add description (optional)';
+	descDisplay.style.color = q.description ? '#374151' : '#9CA3AF';
+	descDisplay.style.fontSize = '14px';
+	descDisplay.style.fontStyle = q.description ? 'normal' : 'italic';
+	descDisplay.addEventListener('click', () => {
+		showDescriptionEditor(descDisplay, q);
+	});
+	
+	descContainer.appendChild(descDisplay);
+
 	const actions = document.createElement('div');
 	actions.className = 'q-actions';
 	
@@ -146,6 +163,7 @@ function renderQuestion(q) {
 
 	header.appendChild(handle);
 	header.appendChild(titleContainer);
+	header.appendChild(descContainer);
 	header.appendChild(actions);
 
 	const body = document.createElement('div');
@@ -667,6 +685,61 @@ function showTitleEditor(displayElement, question) {
 	});
 }
 
+// Description editor function
+function showDescriptionEditor(displayElement, question) {
+	// Make the display element editable directly
+	displayElement.contentEditable = true;
+	displayElement.className = 'q-desc-display editing';
+	displayElement.style.color = '#374151';
+	displayElement.style.fontStyle = 'normal';
+	
+	// Clear placeholder text if it's the default
+	if (displayElement.textContent === 'Click to add description (optional)') {
+		displayElement.textContent = '';
+	}
+	
+	displayElement.focus();
+	
+	// Select all text for easy editing
+	const range = document.createRange();
+	range.selectNodeContents(displayElement);
+	const selection = window.getSelection();
+	selection.removeAllRanges();
+	selection.addRange(range);
+	
+	// Save changes on blur or enter
+	const saveChanges = () => {
+		const newDescription = displayElement.textContent.trim();
+		question.description = newDescription;
+		
+		if (newDescription) {
+			displayElement.textContent = newDescription;
+			displayElement.style.color = '#374151';
+			displayElement.style.fontStyle = 'normal';
+		} else {
+			displayElement.textContent = 'Click to add description (optional)';
+			displayElement.style.color = '#9CA3AF';
+			displayElement.style.fontStyle = 'italic';
+		}
+		
+		displayElement.contentEditable = false;
+		displayElement.className = 'q-desc-display';
+	};
+	
+	displayElement.addEventListener('keydown', (e) => {
+		if (e.key === 'Enter' && !e.shiftKey) {
+			e.preventDefault();
+			saveChanges();
+		}
+		if (e.key === 'Escape') {
+			displayElement.textContent = question.description || 'Click to add description (optional)';
+			saveChanges();
+		}
+	});
+	
+	displayElement.addEventListener('blur', saveChanges);
+}
+
 // Question settings function
 function showQuestionSettings(question) {
 	const modal = document.createElement('div');
@@ -808,6 +881,7 @@ function buildSurveyPayload({ title, description, type, is_published }) {
         const base = {
             id: q.id && typeof q.id === 'number' ? q.id : undefined,
             title: q.title || 'Question',
+            description: q.description || null,
             type: q.type,
             required: !!q.required,
             display_order: idx,
@@ -906,6 +980,7 @@ async function tryLoadSurveyFromQuery(){
             id: q.id,
             type: q.type,
             title: q.title,
+            description: q.description || '',
             required: !!q.required,
             questionPoints: q.points ?? undefined,
             questionWeight: q.weight ?? undefined,

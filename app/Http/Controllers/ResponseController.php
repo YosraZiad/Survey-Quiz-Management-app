@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Answer;
-use App\Models\Option;
-use App\Models\Question;
-use App\Models\Respondent;
-use App\Models\Response as SurveyResponse;
 use App\Models\Survey;
+use App\Models\Question;
+use App\Models\Option;
+use App\Models\Response;
+use App\Models\Respondent;
+use App\Models\Answer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -15,7 +15,7 @@ class ResponseController extends Controller
 {
     public function index(Request $request, Survey $survey)
     {
-        $query = SurveyResponse::where('survey_id', $survey->id)
+        $query = Response::where('survey_id', $survey->id)
             ->with(['respondent','answers.question','answers.option'])
             ->latest();
 
@@ -40,14 +40,14 @@ class ResponseController extends Controller
 
         $data = $query->paginate(20);
 
-        $total = SurveyResponse::where('survey_id',$survey->id)->count();
-        $avgScore = round(SurveyResponse::where('survey_id',$survey->id)->avg('score') ?? 0, 2);
-        $recent = SurveyResponse::where('survey_id',$survey->id)
+        $total = Response::where('survey_id',$survey->id)->count();
+        $avgScore = round(Response::where('survey_id',$survey->id)->avg('score') ?? 0, 2);
+        $recent = Response::where('survey_id',$survey->id)
             ->where('created_at','>=', now()->subDay())
             ->count();
 
         $totalQuestions = max(1, $survey->questions()->count());
-        $allForCompletion = SurveyResponse::where('survey_id',$survey->id)
+        $allForCompletion = Response::where('survey_id',$survey->id)
             ->with('answers')
             ->get();
         $completionRate = 0;
@@ -71,7 +71,7 @@ class ResponseController extends Controller
     public function analytics($surveyId)
     {
         $survey = Survey::findOrFail($surveyId);
-        $responses = SurveyResponse::where('survey_id', $surveyId)
+        $responses = Response::where('survey_id', $surveyId)
             ->with(['respondent', 'answers.option'])
             ->get();
 
@@ -147,7 +147,7 @@ class ResponseController extends Controller
 
     public function show($responseId)
     {
-        $response = SurveyResponse::with(['respondent', 'answers.option', 'survey'])
+        $response = Response::with(['respondent', 'answers.option', 'survey'])
             ->findOrFail($responseId);
 
         return response()->json([
@@ -171,7 +171,7 @@ class ResponseController extends Controller
                 $respondent = Respondent::create($data['respondent']);
             }
 
-            $response = SurveyResponse::create([
+            $response = Response::create([
                 'survey_id' => $survey->id,
                 'respondent_id' => $respondent->id ?? null,
             ]);
@@ -222,6 +222,69 @@ class ResponseController extends Controller
             $response->update(['score' => $score]);
             return $response->load('answers');
         });
+    }
+
+    public function getResponseDetails($responseId)
+    {
+        try {
+            // Check if response exists
+            if (!Response::where('id', $responseId)->exists()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Response not found'
+                ], 404);
+            }
+
+            // Get basic response data
+            $response = Response::find($responseId);
+            
+            // Get survey data
+            $survey = null;
+            if ($response->survey_id) {
+                $survey = Survey::with(['questions' => function($query) {
+                    $query->with('options')->orderBy('display_order');
+                }])->find($response->survey_id);
+            }
+
+            // Get respondent data
+            $respondent = null;
+            if ($response->respondent_id) {
+                $respondent = Respondent::find($response->respondent_id);
+            }
+
+            // Get answers with their relationships
+            $answers = Answer::where('response_id', $responseId)
+                ->with(['question', 'option'])
+                ->get();
+
+            // Build response data manually
+            $responseData = [
+                'id' => $response->id,
+                'survey_id' => $response->survey_id,
+                'respondent_id' => $response->respondent_id,
+                'score' => $response->score,
+                'created_at' => $response->created_at,
+                'updated_at' => $response->updated_at,
+                'survey' => $survey,
+                'respondent' => $respondent,
+                'answers' => $answers
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $responseData
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error in getResponseDetails for response ' . $responseId . ': ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'Server error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 }
 

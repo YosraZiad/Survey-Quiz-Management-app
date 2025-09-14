@@ -28,9 +28,7 @@ Route::get('/results', function () {
     return view('results');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-});
+Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index']);
 
 Route::get('/analytics', function () {
     return view('analytics');

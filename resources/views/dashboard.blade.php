@@ -32,27 +32,31 @@
 			</header>
 
 			<section class="stats">
-				<div class="card stat"><div class="icon">📄</div><div><div class="num">24</div><div class="lbl">Total Surveys</div></div></div>
-				<div class="card stat"><div class="icon">📅</div><div><div class="num">38</div><div class="lbl">Surveys Response</div></div></div>
-				<div class="card stat"><div class="icon">👥</div><div><div class="num">156</div><div class="lbl">Active Users</div></div></div>
-				<div class="card stat"><div class="icon">📈</div><div><div class="num">84%</div><div class="lbl">Response Rate</div></div></div>
+				<div class="card stat"><div class="icon">📄</div><div><div class="num" id="totalSurveys">-</div><div class="lbl">Total Surveys</div></div></div>
+				<div class="card stat"><div class="icon">📅</div><div><div class="num" id="totalResponses">-</div><div class="lbl">Total Responses</div></div></div>
+				<div class="card stat"><div class="icon">👥</div><div><div class="num" id="activeUsers">-</div><div class="lbl">Active Users</div></div></div>
+				<div class="card stat"><div class="icon">📈</div><div><div class="num" id="responseRate">-%</div><div class="lbl">Response Rate</div></div></div>
 			</section>
-
-			<nav class="tabs">
-				<button class="tab active">Survey Analytics</button>
-				<button class="tab">Project Analytics</button>
-				<button class="tab">User Engagement</button>
-				<button class="tab">Satisfaction</button>
-			</nav>
-
 			<section class="grid">
 				<div class="card">
 					<div class="card-title">Survey Responses Over Time</div>
 					<canvas id="chartA" height="180"></canvas>
 				</div>
 				<div class="card">
-					<div class="card-title">Completion Rates</div>
+					<div class="card-title">Survey Types Distribution</div>
 					<canvas id="chartB" height="180"></canvas>
+				</div>
+				<div class="card">
+					<div class="card-title">Recent Activity</div>
+					<div id="recentActivity" style="padding: 20px;">
+						<div class="loading">Loading recent activity...</div>
+					</div>
+				</div>
+				<div class="card">
+					<div class="card-title">Top Performing Surveys</div>
+					<div id="topSurveys" style="padding: 20px;">
+						<div class="loading">Loading survey data...</div>
+					</div>
 				</div>
 			</section>
 		</main>

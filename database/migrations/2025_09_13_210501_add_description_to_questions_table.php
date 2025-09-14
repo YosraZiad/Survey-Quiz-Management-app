@@ -14,7 +14,7 @@ class AddDescriptionToQuestionsTable extends Migration
     public function up()
     {
         Schema::table('questions', function (Blueprint $table) {
-            //
+            $table->text('description')->nullable()->after('title');
         });
     }
 
@@ -26,7 +26,7 @@ class AddDescriptionToQuestionsTable extends Migration
     public function down()
     {
         Schema::table('questions', function (Blueprint $table) {
-            //
+            $table->dropColumn('description');
         });
     }
 }

@@ -94,11 +94,17 @@
 
 			// Load survey info
 			const surveyRes = await fetch(`/api/surveys/${surveyId}`);
+			if (!surveyRes.ok) {
+				throw new Error(`Failed to load survey: ${surveyRes.status}`);
+			}
 			const surveyData = await surveyRes.json();
 			const survey = surveyData;
 
 			// Load response details
 			const responseRes = await fetch(`/api/responses/${responseId}`);
+			if (!responseRes.ok) {
+				throw new Error(`Failed to load response: ${responseRes.status}`);
+			}
 			const responseData = await responseRes.json();
 			const response = responseData.data;
 
@@ -144,7 +150,7 @@
 				} else if (question.options && question.options.length > 0) {
 					// Multiple choice questions
 					if (answer && answer.option) {
-						userAnswerDisplay = answer.option.label || answer.option.text;
+						userAnswerDisplay = answer.option.label || answer.option.text || 'غير محدد';
 						
 						if (survey.type === 'quiz') {
 							// Quiz mode - check if correct
@@ -153,7 +159,7 @@
 								isCorrect = answer.option.id === correctOption.id;
 								questionScore = isCorrect ? (question.points || 1) : 0;
 								maxQuestionScore = question.points || 1;
-								correctAnswerDisplay = correctOption.label || correctOption.text;
+								correctAnswerDisplay = correctOption.label || correctOption.text || 'غير محدد';
 							}
 						} else {
 							// Survey mode - use weights
@@ -161,19 +167,19 @@
 							const maxWeightOption = question.options.reduce((max, opt) => 
 								(opt.weight || 0) > (max.weight || 0) ? opt : max, question.options[0]);
 							maxQuestionScore = maxWeightOption.weight || 0;
-							correctAnswerDisplay = `Best option: ${maxWeightOption.label || maxWeightOption.text}`;
+							correctAnswerDisplay = `Best option: ${maxWeightOption.label || maxWeightOption.text || 'غير محدد'}`;
 							isCorrect = answer.option.id === maxWeightOption.id;
 						}
 					} else {
 						userAnswerDisplay = 'No answer';
 						if (survey.type === 'quiz') {
 							const correctOption = question.options.find(opt => opt.is_correct);
-							correctAnswerDisplay = correctOption ? (correctOption.label || correctOption.text) : 'No correct answer set';
+							correctAnswerDisplay = correctOption ? (correctOption.label || correctOption.text || 'غير محدد') : 'No correct answer set';
 							maxQuestionScore = question.points || 1;
 						} else {
 							const maxWeightOption = question.options.reduce((max, opt) => 
 								(opt.weight || 0) > (max.weight || 0) ? opt : max, question.options[0]);
-							correctAnswerDisplay = `Best option: ${maxWeightOption.label || maxWeightOption.text}`;
+							correctAnswerDisplay = `Best option: ${maxWeightOption.label || maxWeightOption.text || 'غير محدد'}`;
 							maxQuestionScore = maxWeightOption.weight || 0;
 						}
 					}
@@ -193,26 +199,24 @@
 
 				// Display answers comparison
 				if (survey.type === 'quiz') {
-					// For quizzes, show correct vs user answer
+					// For quizzes, show correct answer only if user answer is incorrect
 					const correctOption = question.options.find(opt => opt.is_correct);
-					if (correctOption) {
+					if (correctOption && !isCorrect) {
 						answerHtml += `
 							<div class="correct-answer">
-								<strong>✅ الإجابة الصحيحة:</strong> ${correctOption.text}
-								<span class="badge badge-success">${correctOption.points || question.points || 1} نقطة</span>
+								<strong>✅ الإجابة الصحيحة:</strong> ${correctOption.label || correctOption.text || 'غير محدد'}
 							</div>
 						`;
 					}
 				} else {
-					// For surveys, show optimal answer (highest weight)
+					// For surveys, show optimal answer only if user didn't choose it
 					const optimalOption = question.options.reduce((max, opt) => 
 						(opt.weight || 0) > (max.weight || 0) ? opt : max, question.options[0]);
 					
-					if (optimalOption && optimalOption.weight > 0) {
+					if (optimalOption && optimalOption.weight > 0 && !isCorrect) {
 						answerHtml += `
 							<div class="optimal-answer">
-								<strong>⭐ الإجابة المثلى:</strong> ${optimalOption.text}
-								<span class="badge badge-warning">${optimalOption.weight || 0} وزن</span>
+								<strong>⭐ الإجابة المثلى:</strong> ${optimalOption.label || optimalOption.text || 'غير محدد'}
 							</div>
 						`;
 					}
