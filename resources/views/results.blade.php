@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
@@ -41,6 +40,10 @@
 		.btn:hover { transform: translateY(-2px); transition: all 0.2s; }
 		.account-info { background: #eff6ff; border: 2px solid #bfdbfe; color: #1e40af; padding: 20px; border-radius: 12px; margin-top: 20px; }
 		.account-credentials { background: #f8fafc; padding: 16px; border-radius: 8px; margin-top: 12px; font-family: monospace; }
+		.survey-thank-you { text-align: center; margin-bottom: 30px; }
+		.thank-you-card { background: #f0f9ff; border: 2px solid #0ea5e9; color: #0c4a6e; padding: 30px; border-radius: 16px; }
+		.thank-you-card h2 { margin-bottom: 15px; font-size: 24px; }
+		.thank-you-card p { font-size: 16px; line-height: 1.6; }
 	</style>
 </head>
 <body>
@@ -50,13 +53,20 @@
 			<p class="results-subtitle" id="surveySubtitle">Thank you for completing the survey</p>
 		</div>
 
-		<div class="score-card" id="scoreCard">
+		<div class="score-card" id="scoreCard" style="display: none;">
 			<div class="score-value" id="scoreValue">0</div>
 			<div class="score-label" id="scoreLabel">Total Score</div>
 		</div>
 
 		<div class="status-message" id="statusMessage">
 			Calculating your results...
+		</div>
+
+		<div class="survey-thank-you" id="surveyThankYou" style="display: none;">
+			<div class="thank-you-card">
+				<h2>🙏 شكراً لك على المشاركة</h2>
+				<p>تم تسجيل إجاباتك بنجاح. في حال تم قبول طلبك، سيتم التواصل معك قريباً.</p>
+			</div>
 		</div>
 
 		<div class="question-results" id="questionResults">
@@ -75,7 +85,7 @@
 		</div>
 
 		<div class="actions">
-			<!-- <a href="/" class="btn btn-secondary">اختبار آخر</a> -->
+			<button class="btn btn-secondary" id="downloadBtn">📥 تحميل الأجوبة</button>
 			<a href="#" class="btn btn-primary" id="academyPortalBtn" style="display: none;">دخول الأكاديمية</a>
 		</div>
 	</div>
@@ -237,6 +247,7 @@
 			const scoreValue = document.getElementById('scoreValue');
 			const scoreLabel = document.getElementById('scoreLabel');
 			const statusMessage = document.getElementById('statusMessage');
+			const surveyThankYou = document.getElementById('surveyThankYou');
 
 			if (survey.type === 'quiz') {
 				const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
@@ -255,17 +266,62 @@
 					statusMessage.className = 'status-message failed';
 					scoreCard.className = 'score-card failed';
 				}
+				scoreCard.style.display = 'block';
 			} else {
-				scoreValue.textContent = totalScore;
-				scoreLabel.textContent = `Total Weight Score`;
-				statusMessage.textContent = '✅ Survey completed successfully!';
+				surveyThankYou.style.display = 'block';
 			}
+
+			// Setup download functionality
+			setupDownloadButton(survey, response);
 
 		} catch (error) {
 			console.error('Error loading results:', error);
 			document.getElementById('statusMessage').textContent = 'Error loading results: ' + error.message;
 			document.getElementById('statusMessage').className = 'status-message failed';
 		}
+	}
+
+	function setupDownloadButton(survey, response) {
+		const downloadBtn = document.getElementById('downloadBtn');
+		downloadBtn.addEventListener('click', function() {
+			downloadAnswers(survey, response);
+		});
+	}
+
+	function downloadAnswers(survey, response) {
+		let content = `${survey.title}\n`;
+		content += `نوع الاستبيان: ${survey.type === 'quiz' ? 'كويز' : 'استطلاع'}\n`;
+		content += `التاريخ: ${new Date().toLocaleDateString('ar-SA')}\n`;
+		content += `المشارك: ${response.respondent.name || 'غير محدد'}\n`;
+		content += `البريد الإلكتروني: ${response.respondent.email}\n\n`;
+		content += '='.repeat(50) + '\n\n';
+
+		survey.questions.forEach((question, index) => {
+			const answer = response.answers.find(a => a.question_id === question.id);
+			content += `${index + 1}. ${question.title}\n`;
+			
+			if (answer) {
+				if (answer.value) {
+					content += `الإجابة: ${answer.value}\n`;
+				} else if (answer.option) {
+					content += `الإجابة: ${answer.option.label || answer.option.text}\n`;
+				}
+			} else {
+				content += `الإجابة: لم يتم الإجابة\n`;
+			}
+			content += '\n';
+		});
+
+		// Create and download file
+		const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+		const url = window.URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `${survey.title}_answers_${new Date().toISOString().split('T')[0]}.txt`;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		window.URL.revokeObjectURL(url);
 	}
 
 	async function createUserAccount(respondent, score) {

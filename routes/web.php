@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+// All routes are now public (no authentication required)
 Route::get('/', function () {
     return view('index');
 });
@@ -20,6 +21,7 @@ Route::get('/', function () {
 Route::get('/responses', function () {
     return view('responses');
 });
+
 Route::get('/response-detail/{surveyId}', function ($surveyId) {
     return view('response-detail', compact('surveyId'));
 });
@@ -36,12 +38,13 @@ Route::get('/analytics', function () {
 
 // Preview page (builder preview)
 Route::get('/preview/{survey}', function (\App\Models\Survey $survey) {
+    abort_unless($survey->is_active, 404);
     return view('preview', ['surveyId' => $survey->id]);
 });
 
 // Public fill page (shareable link)
 Route::get('/s/{survey}', function (\App\Models\Survey $survey) {
-    abort_unless($survey->is_published, 404);
+    abort_unless($survey->is_published && $survey->is_active, 404);
     return view('fill', ['surveyId' => $survey->id]);
 });
 

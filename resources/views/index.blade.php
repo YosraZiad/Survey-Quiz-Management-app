@@ -14,7 +14,7 @@
 		<!-- Sidebar -->
 		<aside class="sidebar">
 			<div class="brand">
-				<div class="brand-title"> AQL Sof</div>
+				<div class="brand-title"> AQL Soft</div>
 				<div class="brand-sub">Survey & Quiz Management</div>
 			</div>
 			<nav class="menu">

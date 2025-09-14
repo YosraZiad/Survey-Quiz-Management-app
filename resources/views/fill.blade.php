@@ -25,9 +25,9 @@
 			<div class="q-card">
 				<div class="q-header">Sign in to continue</div>
 				<div class="q-body">
-					<input type="email" id="respEmail" placeholder="your.name@gmail.com" required>
+					<input type="email" id="respEmail" placeholder="your.name@example.com" required>
 					<input type="text" id="respName" placeholder="Your name (optional)" style="margin-top:8px;">
-					<small style="color:#6b7280;">Only Google emails are accepted (ends with @gmail.com).</small>
+					<small style="color:#6b7280;">Please enter a valid email address.</small>
 				</div>
 			</div>
 		</form>
@@ -144,7 +144,7 @@
 		const answers=[]; const formEl=document.getElementById('form'); const form=new FormData(formEl);
 		const email = document.getElementById('respEmail').value.trim();
 		const name = document.getElementById('respName').value.trim();
-		if (!email || !email.endsWith('@gmail.com')){ alert('Please use a valid Google email (gmail.com).'); return; }
+		if (!email || !email.includes('@')){ alert('Please enter a valid email address.'); return; }
 		survey.questions.forEach(q=>{
 			const nameKey = `q_${q.id}`;
 			if(['radio','dropdown'].includes(q.type)){

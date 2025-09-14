@@ -27,7 +27,7 @@ class SurveyController extends Controller
             \Log::info('Survey store request received', ['data' => $request->all()]);
             
             $data = $request->validate([
-                'title' => 'required|string|max:255',
+                'title' => 'required|string|max:255|unique:surveys,title',
                 'description' => 'nullable|string|max:1000',
                 'type' => 'required|in:survey,quiz',
                 'is_published' => 'boolean',
@@ -61,7 +61,7 @@ class SurveyController extends Controller
     {
         try {
             $data = $request->validate([
-                'title' => 'required|string',
+                'title' => 'required|string|unique:surveys,title,' . $survey->id,
                 'description' => 'nullable|string',
                 'type' => 'required|in:survey,quiz',
                 'is_published' => 'boolean',
@@ -106,6 +106,23 @@ class SurveyController extends Controller
         } catch (\Exception $e) {
             \Log::error('Survey publish error: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to publish survey: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function toggleActive(Request $request, Survey $survey)
+    {
+        try {
+            $isActive = $request->input('is_active', true);
+            $survey->update(['is_active' => $isActive]);
+            
+            $status = $isActive ? 'activated' : 'deactivated';
+            return response()->json([
+                'message' => "Survey {$status} successfully", 
+                'survey' => $survey->fresh()
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Survey toggle active error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to update survey status: ' . $e->getMessage()], 500);
         }
     }
 

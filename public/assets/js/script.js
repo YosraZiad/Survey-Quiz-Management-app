@@ -479,9 +479,15 @@ function renderQuestion(q) {
 	footer.className = 'q-footer';
 	const toggle = document.createElement('div');
 	toggle.className = 'toggle';
+	if (q.required) {
+		toggle.classList.add('on');
+	}
 	const reqLabel = document.createElement('span');
 	reqLabel.textContent = 'Required';
-	toggle.addEventListener('click', () => toggle.classList.toggle('on'));
+	toggle.addEventListener('click', () => {
+		toggle.classList.toggle('on');
+		q.required = toggle.classList.contains('on');
+	});
 	footer.appendChild(toggle);
 	footer.appendChild(reqLabel);
 
@@ -519,7 +525,11 @@ dropzone.addEventListener('drop', e => {
 	e.preventDefault();
 	dropzone.classList.remove('dragover');
 	const type = e.dataTransfer.getData('text/plain');
-	if (type) addQuestion(type);
+	
+	// Only add question if it's a field type, not a question ID
+	if (type && FIELD_TYPES.some(ft => ft.key === type)) {
+		addQuestion(type);
+	}
 });
 
 addFirstBtn.addEventListener('click', () => addQuestion('radio'));
@@ -1013,6 +1023,13 @@ function enableReorder(container) {
 			e.preventDefault();
 			const draggedId = e.dataTransfer.getData('text/plain');
 			const targetId = card.dataset.id;
+			
+			// Check if this is a field type being dragged (not a question reorder)
+			if (FIELD_TYPES.some(ft => ft.key === draggedId)) {
+				// This is a new field being added, don't process as reorder
+				return;
+			}
+			
 			if (!draggedId || draggedId === targetId) return;
 			const from = questions.findIndex(x => x.id === draggedId);
 			const to = questions.findIndex(x => x.id === targetId);

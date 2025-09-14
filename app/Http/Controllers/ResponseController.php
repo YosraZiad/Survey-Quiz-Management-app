@@ -158,9 +158,14 @@ class ResponseController extends Controller
 
     public function store(Request $request, Survey $survey)
     {
+        // Check if survey is active before allowing responses
+        if (!$survey->is_active) {
+            return response()->json(['error' => 'Survey is currently closed'], 403);
+        }
+
         $data = $request->validate([
             'respondent' => 'required|array',
-            'respondent.email' => 'required|email|ends_with:gmail.com',
+            'respondent.email' => 'required|email',
             'respondent.name' => 'nullable|string',
             'answers' => 'required|array',
         ]);

@@ -70,39 +70,44 @@
 				<h1>All Survey Responses</h1>
 				<p class="subtitle">View and analyze all responses from surveys and quizzes</p>
 		<div class="actions">
-					<button class="btn" id="exportBtn" disabled>⬇️ Export All</button>
+					<!-- <button class="btn" id="exportBtn" disabled>⬇️ Export All</button> -->
 				</div>
 			</header>
 
 			<section class="toolbar">
 				<div class="search">
 					<input type="search" id="searchInput" placeholder="Search by name, email, or survey..." />
+					<select id="typeFilter" style="margin-left: 10px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+						<option value="">All Types</option>
+						<option value="survey">Surveys</option>
+						<option value="quiz">Quizzes</option>
+					</select>
 				</div>
 			</section>
 
 			<section class="stats" id="stats">
-				<div class="stat"><div class="num" id="totalResponses">0</div><div class="lbl">Total Responses</div></div>
-				<div class="stat"><div class="num" id="totalSurveys">0</div><div class="lbl">Total Surveys</div></div>
-				<div class="stat"><div class="num" id="totalQuizzes">0</div><div class="lbl">Total Quizzes</div></div>
-				<div class="stat"><div class="num" id="avgScore">0</div><div class="lbl">Average Score</div></div>
+				<div class="stat"><div class="num" id="filteredResponses">0</div><div class="lbl">Filtered Responses</div></div>
+				<div class="stat"><div class="num" id="filteredSurveys">0</div><div class="lbl">Filtered Surveys</div></div>
+				<div class="stat"><div class="num" id="filteredQuizzes">0</div><div class="lbl">Filtered Quizzes</div></div>
+				<div class="stat"><div class="num" id="filteredAvgScore">0</div><div class="lbl">Filtered Avg Score</div></div>
 			</section>
 
 			<section class="analytics-section">
 				<div class="analytics-grid">
 					<div class="chart-card">
-						<h3>Response Distribution by Survey Type</h3>
+						<h3>Filtered Response Distribution by Survey Type</h3>
 						<canvas id="typeChart" width="400" height="200"></canvas>
 					</div>
 					<div class="chart-card">
-						<h3>Responses Over Time</h3>
+						<h3>Filtered Responses Over Time</h3>
 						<canvas id="timeChart" width="400" height="200"></canvas>
 					</div>
 					<div class="chart-card">
-						<h3>Top Performing Surveys</h3>
+						<h3>Top Performing Surveys (Filtered)</h3>
 						<canvas id="surveyChart" width="400" height="200"></canvas>
 					</div>
 					<div class="chart-card">
-						<h3>Score Distribution</h3>
+						<h3>Score Distribution (Filtered)</h3>
 						<canvas id="scoreChart" width="400" height="200"></canvas>
 					</div>
 				</div>
@@ -166,6 +171,9 @@
 			// Load all responses from all surveys
 			await loadAllResponses();
 
+			// Initialize filtered responses
+			filteredResponses = [...allResponses];
+
 			// Update statistics
 			updateStatistics();
 
@@ -176,6 +184,9 @@
 
 			// Populate table
 			populateTable();
+
+			// Setup search functionality
+			setupSearch();
 
 			// Hide loading and show table
 			document.getElementById('loadingIndicator').style.display = 'none';
@@ -255,36 +266,43 @@
 	}
 
 	function updateStatistics() {
-		console.log('Updating statistics...');
-		const responses = allResponses;
-		const surveys = allSurveys.filter(s => s.type === 'survey').length;
-		const quizzes = allSurveys.filter(s => s.type === 'quiz').length;
+		console.log('Updating filtered statistics...');
+		const responses = filteredResponses;
+		const uniqueSurveys = [...new Set(responses.map(r => r.survey?.id))].length;
+		const surveys = responses.filter(r => r.survey?.type === 'survey').length;
+		const quizzes = responses.filter(r => r.survey?.type === 'quiz').length;
 
 		const totalScore = responses.reduce((sum, r) => sum + (r.score || 0), 0);
 		const avgScore = responses.length > 0 ? Math.round((totalScore / responses.length) * 100) / 100 : 0;
 
-		console.log(`Statistics: ${responses.length} responses, ${surveys} surveys, ${quizzes} quizzes, avg score: ${avgScore}`);
+		console.log(`Filtered Statistics: ${responses.length} responses, ${uniqueSurveys} unique surveys, avg score: ${avgScore}`);
 
-		document.getElementById('totalResponses').textContent = responses.length;
-		document.getElementById('totalSurveys').textContent = surveys;
-		document.getElementById('totalQuizzes').textContent = quizzes;
-		document.getElementById('avgScore').textContent = avgScore;
+		document.getElementById('filteredResponses').textContent = responses.length;
+		document.getElementById('filteredSurveys').textContent = surveys;
+		document.getElementById('filteredQuizzes').textContent = quizzes;
+		document.getElementById('filteredAvgScore').textContent = avgScore;
 	}
 
 	function createCharts() {
-		const responses = allResponses;
+		const responses = filteredResponses;
+
+		// Clear existing charts
+		Chart.helpers.each(Chart.instances, function(instance) {
+			instance.destroy();
+		});
 
 		if (responses.length === 0) {
-			console.warn('No responses data available for charts');
+			console.warn('No filtered responses data available for charts');
 			// Show message in chart containers
 			document.querySelectorAll('.chart-card').forEach(card => {
 				const canvas = card.querySelector('canvas');
 				if (canvas) {
 					const ctx = canvas.getContext('2d');
+					ctx.clearRect(0, 0, canvas.width, canvas.height);
 					ctx.font = '16px Arial';
 					ctx.fillStyle = '#6b7280';
 					ctx.textAlign = 'center';
-					ctx.fillText('No data available', canvas.width / 2, canvas.height / 2);
+					ctx.fillText('No filtered data available', canvas.width / 2, canvas.height / 2);
 				}
 			});
 			return;
@@ -479,29 +497,40 @@
 
 	function setupSearch() {
 		const searchInput = document.getElementById('searchInput');
-		if (!searchInput) return;
+		const typeFilter = document.getElementById('typeFilter');
+		
+		if (!searchInput || !typeFilter) return;
 
-		searchInput.addEventListener('input', (e) => {
-			const query = e.target.value.toLowerCase();
+		function applyFilters() {
+			const query = searchInput.value.toLowerCase();
+			const selectedType = typeFilter.value;
 
-			if (!query) {
-				filteredResponses = [...allResponses];
-			} else {
-				filteredResponses = allResponses.filter(response => {
-					const respondent = response.respondent;
-					const survey = response.survey;
+			filteredResponses = allResponses.filter(response => {
+				const respondent = response.respondent;
+				const survey = response.survey;
 
-					return (
-						(respondent?.name?.toLowerCase().includes(query)) ||
-						(respondent?.email?.toLowerCase().includes(query)) ||
-						(survey?.title?.toLowerCase().includes(query)) ||
-						(survey?.type?.toLowerCase().includes(query))
-					);
-				});
-			}
+				// Text search filter
+				const matchesSearch = !query || (
+					(respondent?.name?.toLowerCase().includes(query)) ||
+					(respondent?.email?.toLowerCase().includes(query)) ||
+					(survey?.title?.toLowerCase().includes(query)) ||
+					(survey?.type?.toLowerCase().includes(query))
+				);
 
+				// Type filter
+				const matchesType = !selectedType || survey?.type === selectedType;
+
+				return matchesSearch && matchesType;
+			});
+
+			// Update statistics and charts
+			updateStatistics();
+			createCharts();
 			populateTable();
-		});
+		}
+
+		searchInput.addEventListener('input', applyFilters);
+		typeFilter.addEventListener('change', applyFilters);
 	}
 
 	// Export all data

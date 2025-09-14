@@ -17,12 +17,14 @@ use App\Http\Controllers\WordImportController;
 |
 */
 
+// All API routes are now public (no authentication required)
 Route::get('/surveys', [SurveyController::class, 'index']);
 Route::post('/surveys', [SurveyController::class, 'store']);
 Route::get('/surveys/{survey}', [SurveyController::class, 'show']);
 Route::put('/surveys/{survey}', [SurveyController::class, 'update']);
 Route::delete('/surveys/{survey}', [SurveyController::class, 'destroy']);
 Route::post('/surveys/{survey}/publish', [SurveyController::class, 'publish']);
+Route::post('/surveys/{survey}/toggle-active', [SurveyController::class, 'toggleActive']);
 
 Route::post('/surveys/{survey}/responses', [ResponseController::class, 'store']);
 Route::get('/surveys/{survey}/responses', [ResponseController::class, 'index']);

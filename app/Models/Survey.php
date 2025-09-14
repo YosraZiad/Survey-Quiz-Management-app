@@ -10,11 +10,12 @@ class Survey extends Model
     use HasFactory;
 
     protected $fillable = [
-        'title', 'description', 'type', 'is_published', 'metadata', 'survey_number',
+        'title', 'description', 'type', 'is_published', 'is_active', 'metadata', 'survey_number',
     ];
 
     protected $casts = [
         'is_published' => 'boolean',
+        'is_active' => 'boolean',
         'metadata' => 'array',
     ];
 
