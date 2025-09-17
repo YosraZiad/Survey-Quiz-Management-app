@@ -267,8 +267,14 @@
 					scoreCard.className = 'score-card failed';
 				}
 				scoreCard.style.display = 'block';
+				// Show detailed question results for quiz
+				questionsContainer.style.display = 'block';
 			} else {
+				// For surveys, only show thank you message
 				surveyThankYou.style.display = 'block';
+				// Hide detailed question results for surveys
+				questionsContainer.style.display = 'none';
+				statusMessage.style.display = 'none';
 			}
 
 			// Setup download functionality

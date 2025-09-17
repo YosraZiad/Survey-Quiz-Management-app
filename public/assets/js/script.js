@@ -18,6 +18,12 @@ const emptyState = document.getElementById('emptyState');
 let questions = [];
 let currentSurveyType = 'survey'; // 'survey' or 'quiz'
 
+// Initialize global questions array immediately
+if (typeof window.questions === 'undefined') {
+    window.questions = [];
+}
+questions = window.questions;
+
 function createFieldCard(def) {
 	const card = document.createElement('button');
 	card.className = 'field-card';
@@ -59,14 +65,43 @@ function addQuestion(type) {
 		id, 
 		type, 
 		title: defaultTitle(type), 
+		description: '',
 		options: defaultOptions(type),
 		correctAnswer: null, // For quizzes
 		weights: {}, // For surveys - weight for each option
 		points: {}, // For quizzes - points for each option
 		questionPoints: 1, // Default points for the question itself
-		questionWeight: 1.0 // Default weight for the question itself
+		questionWeight: 1.0, // Default weight for the question itself
+		required: false
 	};
-	questions.push(question);
+	
+	// Initialize weights and points for options
+	if (question.options.length > 0) {
+		question.options.forEach((_, idx) => {
+			question.weights[idx] = 1;
+			question.points[idx] = 1;
+		});
+	}
+	
+	// Ensure global questions array is used
+	if (typeof window.questions === 'undefined') {
+		window.questions = [];
+	}
+	
+	// Initialize all required fields for validation
+	if (!question.description) question.description = '';
+	if (typeof question.required === 'undefined') question.required = false;
+	if (!question.weights) question.weights = {};
+	if (!question.points) question.points = {};
+	if (typeof question.questionPoints === 'undefined') question.questionPoints = 1;
+	if (typeof question.questionWeight === 'undefined') question.questionWeight = 1.0;
+	
+	window.questions.push(question);
+	questions = window.questions; // Sync local reference
+	
+	console.log('Added question:', question);
+	console.log('Total questions:', questions.length);
+	
 	renderQuestions();
 }
 
@@ -92,8 +127,33 @@ function defaultOptions(type) {
 }
 
 function renderQuestions() {
+	// Ensure we're using the global questions array and sync
+	if (typeof window.questions !== 'undefined') {
+		questions = window.questions;
+	} else {
+		window.questions = questions || [];
+	}
+	
+	// Validate all questions have required fields
+	questions.forEach(q => {
+		if (!q.description) q.description = '';
+		if (typeof q.required === 'undefined') q.required = false;
+		if (!q.weights) q.weights = {};
+		if (!q.points) q.points = {};
+		if (typeof q.questionPoints === 'undefined') q.questionPoints = 1;
+		if (typeof q.questionWeight === 'undefined') q.questionWeight = 1.0;
+	});
+	
 	const container = ensureQuestionsContainer();
 	container.innerHTML = '';
+	
+	// Check if we have questions to render
+	if (questions.length === 0) {
+		// Show empty state
+		container.innerHTML = '<div class="empty-state">No questions added yet. Add questions from the field types on the right.</div>';
+		return;
+	}
+	
 	questions.forEach(q => container.appendChild(renderQuestion(q)));
 	enableReorder(container);
 	updateSurveyStats();
@@ -124,7 +184,13 @@ function renderQuestion(q) {
 		showTitleEditor(titleDisplay, q);
 	});
 	
+	// Question type display
+	const typeDisplay = document.createElement('span');
+	typeDisplay.className = 'q-type';
+	typeDisplay.textContent = q.type;
+	typeDisplay.style.cssText = 'font-size: 12px; color: var(--muted); margin-left: 8px; display: none;';
 	titleContainer.appendChild(titleDisplay);
+	titleContainer.appendChild(typeDisplay);
 
 	// Description container
 	const descContainer = document.createElement('div');
@@ -250,13 +316,27 @@ function renderQuestion(q) {
 			const optionsWrap = document.createElement('div');
 			q.options.forEach((opt, idx) => {
 				const row = document.createElement('div');
-				row.className = 'option';
+				row.className = 'option-row';
 				
 				// Option text input
 				const input = document.createElement('input');
 				input.type = 'text';
 				input.value = opt;
-				input.addEventListener('input', () => { q.options[idx] = input.value; });
+				input.className = 'option-input';
+				
+				// Make input editable with proper event handling
+				input.addEventListener('input', function() { 
+					q.options[idx] = this.value;
+					window.questions = questions;
+					console.log('Option updated:', idx, this.value);
+				});
+				
+				input.addEventListener('change', function() { 
+					q.options[idx] = this.value;
+					window.questions = questions;
+					updatePreview();
+					console.log('Option saved:', idx, this.value);
+				});
 				
 				// Quiz: Correct answer checkbox and points input
 				if (currentSurveyType === 'quiz') {
@@ -265,7 +345,10 @@ function renderQuestion(q) {
 					correctCheck.name = `correct_${q.id}`;
 					correctCheck.checked = q.correctAnswer === idx;
 					correctCheck.addEventListener('change', () => {
-						if (correctCheck.checked) q.correctAnswer = idx;
+						if (correctCheck.checked) {
+							q.correctAnswer = idx;
+							updatePreview();
+						}
 					});
 					const correctLabel = document.createElement('label');
 					correctLabel.textContent = 'Correct';
@@ -283,6 +366,7 @@ function renderQuestion(q) {
 					pointsInput.addEventListener('input', () => {
 						q.points[idx] = parseInt(pointsInput.value) || 0;
 						updateSurveyStats();
+						updatePreview();
 					});
 					const pointsLabel = document.createElement('label');
 					pointsLabel.textContent = 'Points:';
@@ -305,6 +389,7 @@ function renderQuestion(q) {
 					weightInput.addEventListener('input', () => {
 						q.weights[idx] = parseFloat(weightInput.value) || 0;
 						updateSurveyStats();
+						updatePreview();
 					});
 					row.appendChild(weightInput);
 				}
@@ -322,7 +407,15 @@ function renderQuestion(q) {
 			const addOption = document.createElement('button');
 			addOption.className = 'btn add-option';
 			addOption.textContent = '+ Add option';
-			addOption.addEventListener('click', () => { q.options.push(`Option ${q.options.length + 1}`); renderQuestions(); });
+			addOption.addEventListener('click', () => { 
+				q.options.push(`الخيار ${q.options.length + 1}`); 
+				// Update weights and points for new option
+				const newIdx = q.options.length - 1;
+				q.weights[newIdx] = 1;
+				q.points[newIdx] = 1;
+				window.questions = questions;
+				renderQuestions(); 
+			});
 			body.appendChild(optionsWrap);
 			body.appendChild(addOption);
 			break;
@@ -751,72 +844,118 @@ function showDescriptionEditor(displayElement, question) {
 }
 
 // Question settings function
-function showQuestionSettings(question) {
+function showQuestionSettings(q) {
+	// Create modal overlay
+	const overlay = document.createElement('div');
+	overlay.className = 'modal-overlay';
+	overlay.style.cssText = `
+		position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+		background: rgba(0,0,0,0.5); z-index: 1000;
+		display: flex; align-items: center; justify-content: center;
+	`;
+
+	// Create modal
 	const modal = document.createElement('div');
-	modal.className = 'settings-modal';
-	
-	const content = document.createElement('div');
-	content.className = 'settings-content';
-	
+	modal.className = 'modal';
+	modal.style.cssText = `
+		background: white; border-radius: 12px; padding: 24px;
+		max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;
+	`;
+
+	// Modal header
+	const header = document.createElement('div');
+	header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;';
 	const title = document.createElement('h3');
 	title.textContent = 'Question Settings';
-	
-	const form = document.createElement('form');
-	
-	// Required toggle
-	const requiredDiv = document.createElement('div');
-	requiredDiv.className = 'setting-item';
-	const requiredLabel = document.createElement('label');
-	requiredLabel.textContent = 'Required';
-	const requiredToggle = document.createElement('input');
-	requiredToggle.type = 'checkbox';
-	requiredToggle.checked = question.required || false;
-	requiredToggle.addEventListener('change', () => {
-		question.required = requiredToggle.checked;
-	});
-	requiredLabel.insertBefore(requiredToggle, requiredLabel.firstChild);
-	requiredDiv.appendChild(requiredLabel);
-	
-	// Points (for quizzes)
-	if (currentSurveyType === 'quiz') {
-		const pointsDiv = document.createElement('div');
-		pointsDiv.className = 'setting-item';
-		const pointsLabel = document.createElement('label');
-		pointsLabel.textContent = 'Points:';
-		const pointsInput = document.createElement('input');
-		pointsInput.type = 'number';
-		pointsInput.value = question.points || 1;
-		pointsInput.addEventListener('input', () => {
-			question.points = parseInt(pointsInput.value) || 1;
-			updateSurveyStats();
-		});
-		pointsDiv.appendChild(pointsLabel);
-		pointsDiv.appendChild(pointsInput);
-		form.appendChild(pointsDiv);
-	}
-	
-	form.appendChild(requiredDiv);
-	
-	// Close button
+	title.style.margin = '0';
 	const closeBtn = document.createElement('button');
-	closeBtn.textContent = 'Close';
-	closeBtn.className = 'btn primary';
-	closeBtn.addEventListener('click', () => {
-		modal.remove();
+	closeBtn.textContent = '×';
+	closeBtn.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; color: #666;';
+	closeBtn.addEventListener('click', () => document.body.removeChild(overlay));
+	header.appendChild(title);
+	header.appendChild(closeBtn);
+
+	// Question type selector
+	const typeSection = document.createElement('div');
+	typeSection.style.marginBottom = '20px';
+	const typeLabel = document.createElement('label');
+	typeLabel.textContent = 'Question Type:';
+	typeLabel.style.cssText = 'display: block; margin-bottom: 8px; font-weight: 600;';
+	const typeSelect = document.createElement('select');
+	typeSelect.style.cssText = 'width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;';
+	
+	FIELD_TYPES.forEach(type => {
+		const option = document.createElement('option');
+		option.value = type.key;
+		option.textContent = type.title;
+		if (type.key === q.type) option.selected = true;
+		typeSelect.appendChild(option);
 	});
-	
-	content.appendChild(title);
-	content.appendChild(form);
-	content.appendChild(closeBtn);
-	modal.appendChild(content);
-	
-	document.body.appendChild(modal);
-	
-	// Close on backdrop click
-	modal.addEventListener('click', (e) => {
-		if (e.target === modal) {
-			modal.remove();
+
+	typeSelect.addEventListener('change', () => {
+		const oldType = q.type;
+		const newType = typeSelect.value;
+		
+		// Update question type and reset options
+		q.type = newType;
+		q.options = defaultOptions(newType);
+		
+		// Reset weights and points for new options
+		q.weights = {};
+		q.points = {};
+		q.correctAnswer = null;
+		
+		// Initialize weights and points for new options
+		if (q.options.length > 0) {
+			q.options.forEach((_, idx) => {
+				q.weights[idx] = 1;
+				q.points[idx] = 1;
+			});
 		}
+		
+		// Update the question in the global array
+		const questionIndex = questions.findIndex(question => question.id === q.id);
+		if (questionIndex !== -1) {
+			questions[questionIndex] = { ...q };
+			window.questions = questions;
+		}
+		
+		console.log(`Question type changed from ${oldType} to ${newType}`);
+		
+		// Re-render questions immediately to show the new type in builder
+		renderQuestions();
+		
+		// Save the survey to update the database
+		saveSurvey({ publish: false, redirectToPreview: false }).then(() => {
+			console.log(`Question type change saved successfully`);
+		}).catch(err => {
+			console.error('Failed to save after type change:', err);
+		});
+	});
+
+	typeSection.appendChild(typeLabel);
+	typeSection.appendChild(typeSelect);
+
+	// Save button
+	const saveBtn = document.createElement('button');
+	saveBtn.textContent = 'Save Changes';
+	saveBtn.className = 'btn primary';
+	saveBtn.style.cssText = 'width: 100%; margin-top: 20px;';
+	saveBtn.addEventListener('click', () => {
+		renderQuestions();
+		updatePreview();
+		document.body.removeChild(overlay);
+	});
+
+	modal.appendChild(header);
+	modal.appendChild(typeSection);
+	modal.appendChild(saveBtn);
+	overlay.appendChild(modal);
+	document.body.appendChild(overlay);
+
+	// Close on overlay click
+	overlay.addEventListener('click', (e) => {
+		if (e.target === overlay) document.body.removeChild(overlay);
 	});
 }
 
@@ -832,9 +971,23 @@ async function saveSurvey({ publish = false, redirectToPreview = false } = {}) {
         const descEl = document.getElementById('surveyDesc');
         const surveyType = document.querySelector('input[name="surveyType"]:checked')?.value || 'survey';
         
+        // Validate required fields before building payload
+        const title = titleEl ? titleEl.value.trim() : '';
+        if (!title) {
+            alert('Please enter a survey title');
+            return;
+        }
+        
+        // Check if we have questions in the DOM
+        const questionCards = document.querySelectorAll('.q-card');
+        if (questionCards.length === 0) {
+            alert('Please add at least one question to your survey');
+            return;
+        }
+        
         const payload = buildSurveyPayload({
-            title: titleEl ? titleEl.value : 'New Survey',
-            description: descEl ? descEl.value : '',
+            title: title,
+            description: descEl ? descEl.value.trim() : '',
             type: surveyType,
             is_published: !!publish,
         });
@@ -855,6 +1008,15 @@ async function saveSurvey({ publish = false, redirectToPreview = false } = {}) {
         if (!res.ok) {
             const errorData = await res.json().catch(() => ({}));
             console.error('Save error response:', errorData);
+            
+            // Show detailed validation errors if available
+            if (res.status === 422 && errorData.details) {
+                const errorMessages = Object.entries(errorData.details)
+                    .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+                    .join('\n');
+                throw new Error(`Validation failed:\n${errorMessages}`);
+            }
+            
             throw new Error(`Save failed (${res.status}): ${errorData.error || errorData.message || 'Unknown error'}`);
         }
         
@@ -887,36 +1049,81 @@ async function saveSurvey({ publish = false, redirectToPreview = false } = {}) {
 }
 
 function buildSurveyPayload({ title, description, type, is_published }) {
-    const mappedQuestions = questions.map((q, idx) => {
-        const base = {
-            id: q.id && typeof q.id === 'number' ? q.id : undefined,
-            title: q.title || 'Question',
-            description: q.description || null,
-            type: q.type,
-            required: !!q.required,
+    // Get questions from DOM elements directly to ensure we have the latest data
+    const questionCards = document.querySelectorAll('.q-card');
+    const questionsFromDOM = [];
+    
+    questionCards.forEach((card, idx) => {
+        const questionId = card.dataset.id;
+        const titleEl = card.querySelector('.q-title-display');
+        const descEl = card.querySelector('.q-desc-display');
+        const typeEl = card.querySelector('.q-type');
+        const requiredEl = card.querySelector('input[type="checkbox"]');
+        
+        const questionTitle = titleEl ? titleEl.textContent.trim() : 'Question';
+        const questionDesc = descEl ? descEl.textContent.trim() : '';
+        // Get the actual question type from the questions array instead of DOM
+        const actualQuestion = questions.find(question => question.id === questionId);
+        const questionType = actualQuestion ? actualQuestion.type : 'short';
+        const isRequired = requiredEl ? requiredEl.checked : false;
+        
+        const question = {
+            id: questionId && questionId.includes('q_') ? undefined : parseInt(questionId),
+            title: questionTitle,
+            description: questionDesc,
+            type: questionType,
+            required: isRequired,
             display_order: idx,
             metadata: null,
         };
         
         // Add points or weight based on survey type
         if (type === 'quiz') {
-            base.points = typeof q.questionPoints === 'number' ? q.questionPoints : 1;
+            question.points = 1;
         } else {
-            base.weight = typeof q.questionWeight === 'number' ? q.questionWeight : 1;
+            question.weight = 1.0;
         }
         
-        if (q.type === 'radio' || q.type === 'checkbox' || q.type === 'dropdown') {
-            base.options = (q.options || []).map((label, oIdx) => ({
-                label,
-                weight: type === 'survey' ? (q.weights?.[oIdx] ?? null) : null,
-                points: type === 'quiz' ? (q.points?.[oIdx] ?? null) : null,
-                is_correct: type === 'quiz' ? (q.correctAnswer === oIdx) : false,
+        // Handle options for multi-choice questions
+        if (questionType === 'radio' || questionType === 'checkbox' || questionType === 'dropdown') {
+            // Get options from the actual question object instead of DOM
+            const actualOptions = actualQuestion ? actualQuestion.options : [];
+            question.options = actualOptions.map((label, oIdx) => ({
+                label: typeof label === 'string' ? label : (label?.label || `Option ${oIdx + 1}`),
+                weight: type === 'survey' ? (actualQuestion?.weights?.[oIdx] ?? 1.0) : null,
+                points: type === 'quiz' ? (actualQuestion?.points?.[oIdx] ?? 1) : null,
+                is_correct: type === 'quiz' ? (actualQuestion?.correctAnswer === oIdx) : false,
                 display_order: oIdx,
             }));
+        } else {
+            question.options = [];
         }
-        return base;
+        
+        questionsFromDOM.push(question);
     });
-    return { title, description, type, is_published, questions: mappedQuestions };
+    
+    console.log('Questions from DOM:', questionsFromDOM.length);
+    console.log('Questions data:', questionsFromDOM);
+    
+    const payload = { title, description, type, is_published, questions: questionsFromDOM };
+    console.log('Built payload:', payload);
+    return payload;
+}
+
+// CSV Format Help
+function showCSVHelp() {
+    alert(`CSV Format:\nQuestion Title, Question Type, Option1, Option2, Option3...\n\nExample:\n"What is your name?", "short"\n"Choose your age", "radio", "18-25", "26-35", "36-45"\n"Select hobbies", "checkbox", "Reading", "Sports", "Music"\n\nSupported Types: short, long, radio, checkbox, dropdown, rating, date, number`);
+}
+
+// Update preview function
+function updatePreview() {
+    // Save the survey automatically when preview is updated
+    if (questions.length > 0) {
+        saveSurvey({ publish: false, redirectToPreview: false }).catch(err => {
+            console.error('Failed to auto-save:', err);
+        });
+    }
+    console.log('Preview updated and saved');
 }
 
 // Hook buttons
@@ -925,47 +1132,105 @@ function buildSurveyPayload({ title, description, type, is_published }) {
     if (publishBtn) publishBtn.addEventListener('click', () => saveSurvey({ publish: true }));
     const previewBtn = document.getElementById('previewBtn');
     if (previewBtn) previewBtn.addEventListener('click', () => saveSurvey({ publish: false, redirectToPreview: true }));
+    
     // Load existing survey into builder when ?survey=ID is present
-    document.addEventListener('DOMContentLoaded', tryLoadSurveyFromQuery);
+    document.addEventListener('DOMContentLoaded', () => {
+        tryLoadSurveyFromQuery();
+        renderFieldList();
+        
+        // Setup CSV import after DOM is loaded
+        setupCSVImport();
+    });
 
-    // Word import handler
-    const importForm = document.getElementById('wordImportForm');
+})();
+
+function setupCSVImport() {
+    // CSV import handler
+    const importForm = document.getElementById('csvImportForm');
     if (importForm) {
         importForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const fileInput = document.getElementById('wordFile');
-            if (!fileInput || !fileInput.files || fileInput.files.length === 0) return alert('Choose a .docx or .txt file');
-            const fd = new FormData();
-            fd.append('file', fileInput.files[0]);
-            fd.append('type', document.getElementById('importType')?.value || 'survey');
+            console.log('CSV Import form submitted');
+            
+            const fileInput = document.getElementById('csvFile');
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                alert('Choose a CSV file');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            console.log('File selected:', file.name);
+            
             try {
-                const res = await fetch('/api/surveys/import/word', { method: 'POST', body: fd });
-                if (!res.ok) throw new Error('Import failed');
-                const json = await res.json();
-                const imported = json.questions || [];
-                imported.forEach(q => {
-                    const id = `q_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+                const text = await file.text();
+                console.log('File content:', text.substring(0, 200));
+                
+                const type = document.getElementById('importType')?.value || 'survey';
+                
+                const lines = text.split('\n').filter(line => line.trim());
+                if (lines.length === 0) throw new Error('Empty CSV file');
+                
+                const imported = [];
+                
+                lines.forEach((line, index) => {
+                    const parts = line.split(',').map(part => part.trim().replace(/^"|"$/g, ''));
+                    if (parts.length < 2) return; // Skip invalid lines
+                    
+                    const questionTitle = parts[0];
+                    const questionType = parts[1] || 'short';
+                    const options = parts.slice(2).filter(opt => opt.length > 0);
+                    
+                    const id = `q_${Date.now()}_${Math.random().toString(36).slice(2, 6)}_${index}`;
                     const mapped = {
                         id,
-                        type: q.type || 'short',
-                        title: q.title || 'Question',
-                        options: Array.isArray(q.options) ? q.options : [],
-                        correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : null,
+                        type: ['short', 'long', 'radio', 'checkbox', 'dropdown', 'rating', 'date', 'number'].includes(questionType) ? questionType : 'short',
+                        title: questionTitle || `Question ${index + 1}`,
+                        options: (questionType === 'radio' || questionType === 'checkbox' || questionType === 'dropdown') ? options : [],
+                        correctAnswer: null,
                         weights: {},
-                        points: 1
+                        points: {},
+                        questionPoints: 1,
+                        questionWeight: 1.0,
+                        required: false
                     };
-                    questions.push(mapped);
+                    
+                    // Initialize weights and points for options
+                    if (mapped.options.length > 0) {
+                        mapped.options.forEach((_, idx) => {
+                            mapped.weights[idx] = 1;
+                            mapped.points[idx] = 1;
+                        });
+                    }
+                    
+                    imported.push(mapped);
                 });
+                
+                console.log('Imported questions:', imported);
+                
+                // Add imported questions to the current survey
+                imported.forEach(q => questions.push(q));
+                
+                // Update the survey type if needed
+                currentSurveyType = type;
+                const typeRadio = document.querySelector(`input[name="surveyType"][value="${type}"]`);
+                if (typeRadio) typeRadio.checked = true;
+                
                 renderQuestions();
                 updateSurveyStats();
-                alert(`Imported ${imported.length} questions`);
+                alert(`Imported ${imported.length} questions from CSV`);
+                
+                // Clear the file input
+                fileInput.value = '';
+                
             } catch (err) {
-                console.error(err);
-                alert('Import error');
+                console.error('CSV Import error:', err);
+                alert('CSV Import error: ' + err.message);
             }
         });
+    } else {
+        console.log('CSV Import form not found');
     }
-})();
+}
 
 async function tryLoadSurveyFromQuery(){
     try {
@@ -1011,6 +1276,9 @@ async function tryLoadSurveyFromQuery(){
         console.warn('Failed to load survey from query', e);
     }
 }
+
+// Initialize on page load
+renderFieldList();
 updateSurveyStats();
 
 function enableReorder(container) {

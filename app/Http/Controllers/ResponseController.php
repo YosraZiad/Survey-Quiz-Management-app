@@ -158,17 +158,32 @@ class ResponseController extends Controller
 
     public function store(Request $request, Survey $survey)
     {
-        // Check if survey is active before allowing responses
-        if (!$survey->is_active) {
-            return response()->json(['error' => 'Survey is currently closed'], 403);
-        }
+        try {
+            \Log::info('Response store request', [
+                'survey_id' => $survey->id,
+                'request_data' => $request->all()
+            ]);
 
-        $data = $request->validate([
-            'respondent' => 'required|array',
-            'respondent.email' => 'required|email',
-            'respondent.name' => 'nullable|string',
-            'answers' => 'required|array',
-        ]);
+            // Check if survey is active before allowing responses
+            if (!$survey->is_active) {
+                return response()->json(['error' => 'Survey is currently closed'], 403);
+            }
+
+            $data = $request->validate([
+                'respondent' => 'required|array',
+                'respondent.email' => 'required|email',
+                'respondent.name' => 'nullable|string',
+                'answers' => 'required|array',
+            ]);
+
+            \Log::info('Validated data', ['data' => $data]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Validation failed', ['errors' => $e->errors()]);
+            return response()->json(['error' => 'Validation failed', 'details' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            \Log::error('Store response error', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json(['error' => 'An error occurred while processing your request'], 500);
+        }
 
         return DB::transaction(function () use ($survey, $data) {
             $respondent = null;

@@ -31,7 +31,7 @@ class SurveyController extends Controller
                 'description' => 'nullable|string|max:1000',
                 'type' => 'required|in:survey,quiz',
                 'is_published' => 'boolean',
-                'questions' => 'array'
+                'questions' => 'required|array|min:1'
             ]);
 
             return DB::transaction(function () use ($data) {

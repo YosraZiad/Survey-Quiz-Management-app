@@ -9,9 +9,37 @@
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 	<link rel="stylesheet" href="{{ asset('assets/css/styles.css') }}">
 	<style>
+		body {
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			min-height: 100vh;
+			margin: 0;
+			padding: 20px;
+		}
+		.builder {
+			background: rgba(255, 255, 255, 0.95);
+			backdrop-filter: blur(10px);
+			border-radius: 20px;
+			box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+			padding: 30px;
+		}
 		.header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; }
 		.share { display:flex; gap:8px; align-items:center; }
 		.input { padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; min-width: 280px; }
+		#previewRoot h3 {
+			color: #4a5568;
+			font-size: 28px;
+			margin-bottom: 8px;
+		}
+		#previewRoot p {
+			color: #718096;
+			margin-bottom: 24px;
+		}
+		.q-card {
+			background: rgba(255, 255, 255, 0.9);
+			backdrop-filter: blur(5px);
+			border: 1px solid rgba(255, 255, 255, 0.2);
+			box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+		}
 	</style>
 </head>
 <body>
@@ -41,7 +69,11 @@
 		const title = document.createElement('h3'); title.textContent = s.title; root.appendChild(title);
 		if (s.description) { const d = document.createElement('p'); d.textContent = s.description; root.appendChild(d); }
 		s.questions.forEach(q => {
-			const card = document.createElement('div'); card.className = 'q-card';
+			const card = document.createElement('div'); 
+			card.className = 'q-card';
+			// Add margin bottom for spacing between questions
+			card.style.marginBottom = '24px';
+			
 			const h = document.createElement('div'); h.className = 'q-header'; 
 			h.innerHTML = q.title + (q.required ? ' <span style="color: red; margin-left: 4px;">*</span>' : ''); 
 			card.appendChild(h);

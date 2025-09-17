@@ -168,7 +168,14 @@ button.bg-blue,
 .btn.bg-blue { color: #ffffff !important; }
 
 /* Question blocks */
-.questions { width: 100%; display: grid; gap: 16px; padding: 18px; }
+.questions { 
+	width: 100%; 
+	display: flex; 
+	flex-direction: column; 
+	gap: 16px; 
+	padding: 18px; 
+	min-height: 200px;
+}
 
 .q-card {
 	background: #ffffff;
@@ -176,6 +183,8 @@ button.bg-blue,
 	border-radius: 12px;
 	box-shadow: var(--shadow);
 	padding: 18px;
+	width: 100%;
+	box-sizing: border-box;
 }
 .q-header { display: flex; align-items: center; gap: 12px; }
 .title-container { flex: 1; }
@@ -192,8 +201,25 @@ button.bg-blue,
 .q-body input[type="text"], .q-body textarea, .q-body select { width: 100%; background: #ffffff; border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 10px; }
 .q-body textarea { min-height: 80px; }
 
-.option { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
-.option input[type="text"] { flex: 1; }
+.option-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+.option-row input[type="text"] { flex: 1; }
+.option-input { 
+	flex: 1; 
+	background: #ffffff; 
+	border: 1px solid var(--border); 
+	color: var(--text); 
+	padding: 8px 12px; 
+	border-radius: 8px;
+	transition: border-color 0.2s ease;
+}
+.option-input:focus {
+	outline: none;
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px rgba(15,98,254,0.1);
+}
+.option-input:hover {
+	border-color: #cfd8e3;
+}
 .add-option { margin-top: 6px; }
 
 .placeholder { height: 64px; border: 2px dashed var(--accent); border-radius: 10px; }
