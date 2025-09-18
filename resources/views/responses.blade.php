@@ -52,36 +52,54 @@
 			</header>
 
 			<section class="toolbar">
-				<div class="filter-controls" style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px;">
-					<div class="filter-group">
-						<label for="questionSelect" style="font-weight: 500; margin-right: 8px;">Select Question:</label>
-						<select id="questionSelect" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; min-width: 200px;">
-							<option value="">Choose a question to analyze</option>
-						</select>
-					</div>
+				<!-- Filter Controls Section with Integrated Results -->
+				<div class="filter-section" style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+					<h3 style="margin: 0 0 15px 0; color: #374151; font-size: 18px;">📊 Analysis & Filters</h3>
 					
-					<div class="filter-group">
-						<label for="chartTypeSelect" style="font-weight: 500; margin-right: 8px;">Chart Type:</label>
-						<select id="chartTypeSelect" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
-							<option value="">Select Chart Type</option>
-							<option value="bar">Bar Chart</option>
-							<option value="pie">Pie Chart</option>
-							<option value="line">Line Chart</option>
-							<option value="table">Data Table</option>
-						</select>
+					<div class="filter-controls" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
+						<div class="filter-group">
+							<label for="questionSelect" style="font-weight: 500; margin-right: 8px; color: #374151;">Select Question:</label>
+							<select id="questionSelect" style="padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; min-width: 250px; background: white;">
+								<option value="">Choose a question to analyze</option>
+							</select>
+						</div>
+						
+						<div class="filter-group">
+							<label for="chartTypeSelect" style="font-weight: 500; margin-right: 8px; color: #374151;">Chart Type:</label>
+							<select id="chartTypeSelect" style="padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; min-width: 150px; background: white;">
+								<option value="">Select Chart Type</option>
+								<option value="bar">📊 Bar Chart</option>
+								<option value="pie">🥧 Pie Chart</option>
+								<option value="line">📈 Line Chart</option>
+								<option value="table">📋 Data Table</option>
+							</select>
+						</div>
+						
+						<button id="generateAnalysis" class="btn primary" style="display: none; padding: 10px 20px; border-radius: 8px;">🔍 Generate Analysis</button>
+						<button id="testWithSampleData" class="btn" style="display: none; background: #f59e0b; color: white; margin-left: 10px; padding: 10px 20px; border-radius: 8px;">🧪 Test with Sample Data</button>
 					</div>
-					
-					<button id="generateAnalysis" class="btn primary" style="display: none;">Generate Analysis</button>
-					<button id="testWithSampleData" class="btn" style="display: none; background: #f59e0b; color: white; margin-left: 10px;">Test with Sample Data</button>
+
+					<!-- Analysis Results - Integrated inside filter section -->
+					<div id="analysisResults" style="display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 15px; margin-top: 10px; color: white;">
+						<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+							<div style="display: flex; align-items: center;">
+								<span style="font-size: 16px; margin-right: 8px;">📈</span>
+								<h4 id="analysisTitle" style="margin: 0; font-size: 14px; font-weight: 600;">Analysis Results</h4>
+							</div>
+							<button onclick="toggleAnalysisSize()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">
+								<span id="toggleIcon">⬇️</span>
+							</button>
+						</div>
+						<div id="analysisContent" style="background: rgba(255,255,255,0.95); border-radius: 6px; padding: 12px; color: #374151; max-height: 250px; overflow-y: auto;"></div>
+					</div>
 				</div>
 				
-				<div id="analysisResults" style="display: none; background: #f8fafc; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-					<h3 id="analysisTitle">Analysis Results</h3>
-					<div id="analysisContent"></div>
-				</div>
-				
-				<div class="search" style="margin-top: 20px;">
-					<input type="search" id="searchInput" placeholder="Search by name, email..." />
+				<!-- Search Section -->
+				<div class="search-section" style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+					<div style="display: flex; align-items: center; gap: 10px;">
+						<span style="font-size: 18px;">🔍</span>
+						<input type="search" id="searchInput" placeholder="Search by name, email, survey title..." style="flex: 1; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;" />
+					</div>
 				</div>
 			</section>
 
@@ -94,34 +112,39 @@
 
 
 
-			<section class="data-table-section">
-				<div class="table-header">
-					<h3>All Survey Respondents</h3>
-					<div class="table-actions">
-						<button class="btn" id="exportPeopleData">📥 Export Data</button>
-						<button class="btn" id="refreshData">🔄 Refresh</button>
+			<section class="data-table-section" style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+				<div class="table-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f3f4f6;">
+					<div>
+						<h3 style="margin: 0; color: #374151; font-size: 20px; font-weight: 600;">📋 Survey Responses Data</h3>
+						<p style="margin: 5px 0 0 0; color: #6b7280; font-size: 14px;">Complete list of all survey responses and participant details</p>
+					</div>
+					<div class="table-actions" style="display: flex; gap: 10px;">
+						<button class="btn" id="exportPeopleData" style="padding: 8px 16px; border-radius: 8px; background: #10b981; color: white; border: none; cursor: pointer;">📥 Export Data</button>
+						<button class="btn" id="refreshData" style="padding: 8px 16px; border-radius: 8px; background: #3b82f6; color: white; border: none; cursor: pointer;">🔄 Refresh</button>
 					</div>
 				</div>
 				
-				<div class="table-container">
-					<div id="loadingIndicator" style="text-align: center; padding: 40px; color: #6b7280;">
-						Loading responses...
+				<div class="table-container" style="overflow-x: auto; border-radius: 8px; border: 1px solid #e5e7eb;">
+					<div id="loadingIndicator" style="text-align: center; padding: 60px; color: #6b7280; background: #f9fafb;">
+						<div style="display: inline-block; margin-bottom: 15px; font-size: 24px;">⏳</div>
+						<div style="font-size: 16px; font-weight: 500;">Loading responses...</div>
+						<div style="font-size: 14px; margin-top: 5px; opacity: 0.7;">Please wait while we fetch the data</div>
 					</div>
-					<table id="peopleTable" style="display: none;">
-						<thead>
+					<table id="peopleTable" style="display: none; width: 100%; border-collapse: collapse; background: white;">
+						<thead style="background: #f8fafc; border-bottom: 2px solid #e5e7eb;">
 							<tr>
-								<th>#</th>
-								<th>Name</th>
-								<th>Email</th>
-								<th>Survey Title</th>
-								<th>Survey Number</th>
-								<th>Type</th>
-								<th> Weight/ًScore</th>
-								<th>Date</th>
-								<th>Actions</th>
+								<th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-right: 1px solid #e5e7eb;">#</th>
+								<th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-right: 1px solid #e5e7eb;">👤 Name</th>
+								<th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-right: 1px solid #e5e7eb;">📧 Email</th>
+								<th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-right: 1px solid #e5e7eb;">📋 Survey Title</th>
+								<th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-right: 1px solid #e5e7eb;">🔢 Survey #</th>
+								<th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-right: 1px solid #e5e7eb;">📊 Type</th>
+								<th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-right: 1px solid #e5e7eb;">⭐ Score</th>
+								<th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-right: 1px solid #e5e7eb;">📅 Date</th>
+								<th style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">⚙️ Actions</th>
 							</tr>
 						</thead>
-						<tbody id="peopleTbody">
+						<tbody id="peopleTbody" style="background: white;">
 							<!-- Data will be populated by JavaScript -->
 						</tbody>
 					</table>
@@ -317,8 +340,16 @@
 		if (filteredResponses.length === 0) {
 			const tr = document.createElement('tr');
 			tr.innerHTML = `
-				<td colspan="9" style="text-align: center; padding: 40px; color: #6b7280;">
-					${allResponses.length === 0 ? 'No responses found' : 'No responses match your search criteria'}
+				<td colspan="9" style="text-align: center; padding: 60px; background: #f9fafb;">
+					<div style="color: #6b7280;">
+						<div style="font-size: 48px; margin-bottom: 15px;">📭</div>
+						<div style="font-size: 18px; font-weight: 500; margin-bottom: 8px; color: #374151;">
+							${allResponses.length === 0 ? 'No responses found' : 'No responses match your search criteria'}
+						</div>
+						<div style="font-size: 14px; opacity: 0.7;">
+							${allResponses.length === 0 ? 'Start collecting responses by sharing your surveys' : 'Try adjusting your search terms or filters'}
+						</div>
+					</div>
 				</td>
 			`;
 			tbody.appendChild(tr);
@@ -332,17 +363,32 @@
 			console.log(`Processing response ${index + 1}:`, response);
 
 			const tr = document.createElement('tr');
+			tr.style.borderBottom = '1px solid #f3f4f6';
+			tr.style.transition = 'background-color 0.2s ease';
+			tr.onmouseover = () => tr.style.backgroundColor = '#f8fafc';
+			tr.onmouseout = () => tr.style.backgroundColor = 'white';
+			
+			const surveyType = response.survey?.type === 'quiz' ? 'Quiz' : 'Survey';
+			const typeColor = response.survey?.type === 'quiz' ? '#3b82f6' : '#10b981';
+			const scoreColor = response.score >= 70 ? '#10b981' : response.score >= 50 ? '#f59e0b' : '#ef4444';
+			
 			tr.innerHTML = `
-				<td>${index + 1}</td>
-				<td>${respondent.name || '-'}</td>
-				<td>${respondent.email || '-'}</td>
-				<td>${response.survey?.title || 'Unknown Survey'}</td>
-				<td>${response.survey?.survey_number || 'N/A'}</td>
-				<td>${response.survey?.type === 'quiz' ? 'Quiz' : 'Survey'}</td>
-				<td>${response.score || 0}</td>
-				<td>${new Date(response.created_at).toLocaleDateString()}</td>
-				<td>
-					<button class="icon-btn" onclick="viewResponse(${response.survey?.id}, ${respondent.id})" title="View Details">👁️</button>
+				<td style="padding: 12px; border-right: 1px solid #f3f4f6; font-weight: 500; color: #6b7280;">${index + 1}</td>
+				<td style="padding: 12px; border-right: 1px solid #f3f4f6; font-weight: 500; color: #374151;">${respondent.name || '-'}</td>
+				<td style="padding: 12px; border-right: 1px solid #f3f4f6; color: #6b7280; font-family: monospace; font-size: 13px;">${respondent.email || '-'}</td>
+				<td style="padding: 12px; border-right: 1px solid #f3f4f6; color: #374151; font-weight: 500;">${response.survey?.title || 'Unknown Survey'}</td>
+				<td style="padding: 12px; border-right: 1px solid #f3f4f6; text-align: center; font-weight: 600; color: #6b7280;">${response.survey?.survey_number || 'N/A'}</td>
+				<td style="padding: 12px; border-right: 1px solid #f3f4f6; text-align: center;">
+					<span style="background: ${typeColor}; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">${surveyType}</span>
+				</td>
+				<td style="padding: 12px; border-right: 1px solid #f3f4f6; text-align: center; font-weight: 600; color: ${scoreColor};">${response.score || 0}</td>
+				<td style="padding: 12px; border-right: 1px solid #f3f4f6; color: #6b7280; font-size: 13px;">${new Date(response.created_at).toLocaleDateString()}</td>
+				<td style="padding: 12px; text-align: center;">
+					<button class="icon-btn" onclick="viewResponse(${response.survey?.id}, ${respondent.id})" title="View Details" 
+						style="background: #f3f4f6; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;"
+						onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+						👁️ View
+					</button>
 				</td>
 			`;
 			tbody.appendChild(tr);
@@ -833,6 +879,22 @@
 		
 		return tableContent;
 	}
+
+	// Toggle analysis section size
+	window.toggleAnalysisSize = function() {
+		const analysisContent = document.getElementById('analysisContent');
+		const toggleIcon = document.getElementById('toggleIcon');
+		
+		if (analysisContent.style.maxHeight === '250px' || !analysisContent.style.maxHeight) {
+			// Expand
+			analysisContent.style.maxHeight = 'none';
+			toggleIcon.textContent = '⬆️';
+		} else {
+			// Collapse
+			analysisContent.style.maxHeight = '250px';
+			toggleIcon.textContent = '⬇️';
+		}
+	};
 
 	// Initialize - require survey ID
 	if (!specificSurveyId || specificSurveyId === 'null') {
