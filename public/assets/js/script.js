@@ -398,7 +398,38 @@ function renderQuestion(q) {
 				del.className = 'icon-btn';
 				del.textContent = '−';
 				del.title = 'Delete option';
-				del.addEventListener('click', () => { q.options.splice(idx, 1); renderQuestions(); });
+				del.addEventListener('click', async () => { 
+					try {
+						let confirmed = true;
+						if (typeof window.confirmDialog !== 'undefined') {
+							confirmed = await window.confirmDialog.show(
+								'Do you want to delete this option?',
+								'Confirm Delete',
+								{
+									confirmText: 'Delete',
+									cancelText: 'Cancel',
+									type: 'danger'
+								}
+							);
+						} else {
+							confirmed = confirm('Do you want to delete this option?');
+						}
+						
+						if (confirmed) {
+							q.options.splice(idx, 1);
+							if (typeof window.toast !== 'undefined') {
+								window.toast.success('Option deleted successfully');
+							}
+							renderQuestions();
+						}
+					} catch (error) {
+						console.error('Error deleting option:', error);
+						if (confirm('Do you want to delete this option?')) {
+							q.options.splice(idx, 1);
+							renderQuestions();
+						}
+					}
+				});
 				
 				row.appendChild(input);
 				row.appendChild(del);
@@ -969,144 +1000,164 @@ async function saveSurvey({ publish = false, redirectToPreview = false } = {}) {
     try {
         const titleEl = document.getElementById('surveyTitle');
         const descEl = document.getElementById('surveyDesc');
-        const surveyType = document.querySelector('input[name="surveyType"]:checked')?.value || 'survey';
         
-        // Validate required fields before building payload
-        const title = titleEl ? titleEl.value.trim() : '';
+        if (!titleEl || !descEl) {
+            throw new Error('Survey title or description element not found');
+        }
+
+        const title = titleEl.value.trim();
+        const description = descEl.value.trim();
+        
         if (!title) {
-            alert('Please enter a survey title');
-            return;
+            if (typeof window.toast !== 'undefined') window.toast.error('Survey title is required');
+            throw new Error('Survey title is required');
         }
-        
-        // Check if we have questions in the DOM
-        const questionCards = document.querySelectorAll('.q-card');
-        if (questionCards.length === 0) {
-            alert('Please add at least one question to your survey');
-            return;
-        }
-        
-        const payload = buildSurveyPayload({
-            title: title,
-            description: descEl ? descEl.value.trim() : '',
-            type: surveyType,
-            is_published: !!publish,
-        });
 
-        console.log('Sending payload:', JSON.stringify(payload, null, 2));
-
-        const endpoint = currentSurveyId ? `/api/surveys/${currentSurveyId}` : '/api/surveys';
-        const method = currentSurveyId ? 'PUT' : 'POST';
-        const res = await fetch(endpoint, {
-            method,
-            headers: { 
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify(payload),
-        });
-        
-        if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}));
-            console.error('Save error response:', errorData);
-            
-            // Show detailed validation errors if available
-            if (res.status === 422 && errorData.details) {
-                const errorMessages = Object.entries(errorData.details)
-                    .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
-                    .join('\n');
-                throw new Error(`Validation failed:\n${errorMessages}`);
+        if (questions.length === 0) {
+            if (typeof window.toast !== 'undefined') window.toast.warning('At least one question is required');
+            // For preview, allow empty surveys
+            if (!redirectToPreview) {
+                throw new Error('At least one question is required');
             }
-            
-            throw new Error(`Save failed (${res.status}): ${errorData.error || errorData.message || 'Unknown error'}`);
         }
-        
-        const data = await res.json();
-        currentSurveyId = data.id;
 
-        if (publish) {
-            const pubRes = await fetch(`/api/surveys/${currentSurveyId}/publish`, { 
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json'
-                }
+        const payload = buildSurveyPayload(title, description, questions);
+        console.log('Saving survey with payload:', payload);
+
+        // Show saving toast
+        if (typeof window.toast !== 'undefined' && !publish && !redirectToPreview) {
+            window.toast.info('Saving survey...');
+        }
+
+        let response;
+        if (currentSurveyId) {
+            // Update existing survey
+            response = await fetch(`/api/surveys/${currentSurveyId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
-            if (!pubRes.ok) {
-                const pubError = await pubRes.json().catch(() => ({}));
-                throw new Error(`Publish failed (${pubRes.status}): ${pubError.error || 'Unknown error'}`);
-            }
-            alert('Survey published successfully');
         } else {
-            if (redirectToPreview) {
-                window.location.href = `/preview/${currentSurveyId}`;
-                return;
-            }
-            alert('Survey saved successfully');
+            // Create new survey
+            response = await fetch('/api/surveys', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
         }
-    } catch (err) {
-        console.error('Save error:', err);
-        alert(err.message || 'Save failed');
+
+        if (!response.ok) {
+            let errorMessage = `HTTP ${response.status}`;
+            try {
+                const errorData = await response.json();
+                console.error('Survey save error response:', errorData);
+                errorMessage = errorData.error || errorData.message || errorMessage;
+                if (errorData.details) {
+                    console.error('Validation details:', errorData.details);
+                    errorMessage += ': ' + JSON.stringify(errorData.details);
+                }
+            } catch (e) {
+                console.error('Error parsing error response:', e);
+            }
+            
+            if (typeof window.toast !== 'undefined') {
+                window.toast.error('Failed to save survey: ' + errorMessage);
+            }
+            throw new Error(errorMessage);
+        }
+
+        const result = await response.json();
+        console.log('Survey saved successfully:', result);
+
+        // Update current survey ID for future saves
+        if (result.data && result.data.id) {
+            currentSurveyId = result.data.id;
+        } else if (result.id) {
+            currentSurveyId = result.id;
+        }
+
+        // Show success toast
+        if (typeof window.toast !== 'undefined' && !publish && !redirectToPreview) {
+            window.toast.success('Survey saved successfully');
+        }
+
+        // Handle publish action
+        if (publish && currentSurveyId) {
+            if (typeof window.toast !== 'undefined') window.toast.info('Publishing survey...');
+            
+            const publishResponse = await fetch(`/api/surveys/${currentSurveyId}/publish`, {
+                method: 'POST'
+            });
+            
+            if (!publishResponse.ok) {
+                if (typeof window.toast !== 'undefined') window.toast.error('Failed to publish survey');
+                throw new Error('Failed to publish survey');
+            }
+            
+            if (typeof window.toast !== 'undefined') window.toast.success('Survey published successfully');
+            console.log('Survey published successfully');
+        }
+
+        // Handle redirect to preview
+        if (redirectToPreview && currentSurveyId) {
+            if (typeof window.toast !== 'undefined') window.toast.info('Redirecting to preview...');
+            window.location.href = `/preview?survey=${currentSurveyId}`;
+        }
+
+        return result;
+
+    } catch (error) {
+        console.error('Error saving survey:', error);
+        if (typeof window.toast !== 'undefined' && !error.message.includes('title') && !error.message.includes('question')) {
+            window.toast.error('Error occurred while saving survey');
+        }
+        throw error;
     }
 }
 
-function buildSurveyPayload({ title, description, type, is_published }) {
-    // Get questions from DOM elements directly to ensure we have the latest data
-    const questionCards = document.querySelectorAll('.q-card');
-    const questionsFromDOM = [];
+function buildSurveyPayload(title, description, questionsArray) {
+    // Use the questions array passed as parameter
+    const questionsData = questionsArray || questions;
     
-    questionCards.forEach((card, idx) => {
-        const questionId = card.dataset.id;
-        const titleEl = card.querySelector('.q-title-display');
-        const descEl = card.querySelector('.q-desc-display');
-        const typeEl = card.querySelector('.q-type');
-        const requiredEl = card.querySelector('input[type="checkbox"]');
-        
-        const questionTitle = titleEl ? titleEl.textContent.trim() : 'Question';
-        const questionDesc = descEl ? descEl.textContent.trim() : '';
-        // Get the actual question type from the questions array instead of DOM
-        const actualQuestion = questions.find(question => question.id === questionId);
-        const questionType = actualQuestion ? actualQuestion.type : 'short';
-        const isRequired = requiredEl ? requiredEl.checked : false;
-        
-        const question = {
-            id: questionId && questionId.includes('q_') ? undefined : parseInt(questionId),
-            title: questionTitle,
-            description: questionDesc,
-            type: questionType,
-            required: isRequired,
-            display_order: idx,
-            metadata: null,
-        };
-        
-        // Add points or weight based on survey type
-        if (type === 'quiz') {
-            question.points = 1;
-        } else {
-            question.weight = 1.0;
-        }
-        
-        // Handle options for multi-choice questions
-        if (questionType === 'radio' || questionType === 'checkbox' || questionType === 'dropdown') {
-            // Get options from the actual question object instead of DOM
-            const actualOptions = actualQuestion ? actualQuestion.options : [];
-            question.options = actualOptions.map((label, oIdx) => ({
-                label: typeof label === 'string' ? label : (label?.label || `Option ${oIdx + 1}`),
-                weight: type === 'survey' ? (actualQuestion?.weights?.[oIdx] ?? 1.0) : null,
-                points: type === 'quiz' ? (actualQuestion?.points?.[oIdx] ?? 1) : null,
-                is_correct: type === 'quiz' ? (actualQuestion?.correctAnswer === oIdx) : false,
-                display_order: oIdx,
-            }));
-        } else {
-            question.options = [];
-        }
-        
-        questionsFromDOM.push(question);
-    });
+    const payload = {
+        title: title,
+        description: description || '',
+        type: currentSurveyType || 'survey',
+        is_published: false,
+        questions: questionsData.map((q, idx) => {
+            const question = {
+                title: q.title || 'Question',
+                description: q.description || '',
+                type: q.type || 'short',
+                required: q.required || false,
+                display_order: idx,
+                metadata: null,
+            };
+            
+            // Add points or weight based on survey type
+            if (currentSurveyType === 'quiz') {
+                question.points = q.questionPoints || 1;
+            } else {
+                question.weight = q.questionWeight || 1.0;
+            }
+            
+            // Handle options for multi-choice questions
+            if (q.type === 'radio' || q.type === 'checkbox' || q.type === 'dropdown') {
+                question.options = (q.options || []).map((label, oIdx) => ({
+                    label: typeof label === 'string' ? label : (label?.label || `Option ${oIdx + 1}`),
+                    weight: currentSurveyType === 'survey' ? (q.weights?.[oIdx] ?? 1.0) : null,
+                    points: currentSurveyType === 'quiz' ? (q.points?.[oIdx] ?? 1) : null,
+                    is_correct: currentSurveyType === 'quiz' ? (q.correctAnswer === oIdx) : false,
+                    display_order: oIdx,
+                }));
+            } else {
+                question.options = [];
+            }
+            
+            return question;
+        })
+    };
     
-    console.log('Questions from DOM:', questionsFromDOM.length);
-    console.log('Questions data:', questionsFromDOM);
-    
-    const payload = { title, description, type, is_published, questions: questionsFromDOM };
-    console.log('Built payload:', payload);
     return payload;
 }
 
@@ -1126,20 +1177,86 @@ function updatePreview() {
     console.log('Preview updated and saved');
 }
 
-// Hook buttons
+// Hook buttons - wait for toast system to be ready
+function initializeButtons() {
+    // Wait for toast system to be available
+    const waitForToast = () => {
+        if (typeof window.toast !== 'undefined' && typeof window.confirmDialog !== 'undefined') {
+            setupButtonEvents();
+        } else {
+            setTimeout(waitForToast, 50);
+        }
+    };
+    
+    const setupButtonEvents = () => {
+        const publishBtn = document.getElementById('publishBtn');
+        if (publishBtn && !publishBtn.hasAttribute('data-initialized')) {
+            console.log('Initializing publish button');
+            publishBtn.setAttribute('data-initialized', 'true');
+            publishBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                console.log('Publish button clicked');
+                try {
+                    const confirmed = await window.confirmDialog.show(
+                        'Do you want to publish this survey? It will become available to the public after publishing.',
+                        'Confirm Publish',
+                        {
+                            confirmText: 'Publish',
+                            cancelText: 'Cancel',
+                            type: 'publish'
+                        }
+                    );
+                    
+                    if (confirmed) {
+                        console.log('User confirmed publish, calling saveSurvey');
+                        await saveSurvey({ publish: true });
+                    } else {
+                        console.log('User cancelled publish');
+                    }
+                } catch (error) {
+                    console.error('Error in publish button:', error);
+                    // Fallback without confirmation dialog
+                    await saveSurvey({ publish: true });
+                }
+            });
+        }
+        
+        const previewBtn = document.getElementById('previewBtn');
+        if (previewBtn && !previewBtn.hasAttribute('data-initialized')) {
+            console.log('Initializing preview button');
+            previewBtn.setAttribute('data-initialized', 'true');
+            previewBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                console.log('Preview button clicked');
+                try {
+                    await saveSurvey({ publish: false, redirectToPreview: true });
+                } catch (error) {
+                    console.error('Error in preview:', error);
+                }
+            });
+        }
+    };
+    
+    waitForToast();
+}
+
+// Initialize when DOM is ready
 (() => {
-    const publishBtn = document.getElementById('publishBtn');
-    if (publishBtn) publishBtn.addEventListener('click', () => saveSurvey({ publish: true }));
-    const previewBtn = document.getElementById('previewBtn');
-    if (previewBtn) previewBtn.addEventListener('click', () => saveSurvey({ publish: false, redirectToPreview: true }));
     
     // Load existing survey into builder when ?survey=ID is present
     document.addEventListener('DOMContentLoaded', () => {
+        console.log('DOM Content Loaded');
         tryLoadSurveyFromQuery();
         renderFieldList();
         
         // Setup CSV import after DOM is loaded
         setupCSVImport();
+        
+        // Initialize buttons after everything is loaded
+        setTimeout(() => {
+            console.log('Initializing buttons with delay');
+            initializeButtons();
+        }, 500);
     });
 
 })();
@@ -1154,7 +1271,11 @@ function setupCSVImport() {
             
             const fileInput = document.getElementById('csvFile');
             if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-                alert('Choose a CSV file');
+                if (typeof window.toast !== 'undefined') {
+                    window.toast.warning('Please choose a CSV file');
+                } else {
+                    alert('Please choose a CSV file');
+                }
                 return;
             }
             
@@ -1207,6 +1328,27 @@ function setupCSVImport() {
                 
                 console.log('Imported questions:', imported);
                 
+                // Show preview dialog before importing
+                let confirmed = true;
+                if (typeof window.confirmDialog !== 'undefined') {
+                    confirmed = await window.confirmDialog.show(
+                        `Found ${imported.length} questions that already exist:\n${imported.map(q => q.title).slice(0, 5).join('\n')}${imported.length > 5 ? '\n...' : ''}`,
+                        'Import CSV Questions',
+                        {
+                            confirmText: 'Import',
+                            cancelText: 'Cancel',
+                            type: 'info'
+                        }
+                    );
+                } else {
+                    confirmed = confirm(`Found ${imported.length} questions. Do you want to import them?`);
+                }
+                
+                if (!confirmed) {
+                    fileInput.value = '';
+                    return;
+                }
+                
                 // Add imported questions to the current survey
                 imported.forEach(q => questions.push(q));
                 
@@ -1217,14 +1359,22 @@ function setupCSVImport() {
                 
                 renderQuestions();
                 updateSurveyStats();
-                alert(`Imported ${imported.length} questions from CSV`);
+                if (typeof window.toast !== 'undefined') {
+                    window.toast.success(`Successfully imported ${imported.length} questions from CSV`);
+                } else {
+                    alert(`Successfully imported ${imported.length} questions from CSV`);
+                }
                 
                 // Clear the file input
                 fileInput.value = '';
                 
             } catch (err) {
                 console.error('CSV Import error:', err);
-                alert('CSV Import error: ' + err.message);
+                if (typeof window.toast !== 'undefined') {
+                    window.toast.error('CSV Import error: ' + err.message);
+                } else {
+                    alert('CSV Import error: ' + err.message);
+                }
             }
         });
     } else {

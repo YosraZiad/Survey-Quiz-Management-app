@@ -19,7 +19,11 @@ Route::get('/', function () {
 });
 
 Route::get('/responses', function () {
-    return view('responses');
+    $surveyId = request('survey');
+    if (!$surveyId) {
+        return redirect('/surveys')->with('error', 'Please select a survey to view responses.');
+    }
+    return view('responses', ['surveyId' => $surveyId]);
 });
 
 Route::get('/response-detail/{surveyId}', function ($surveyId) {
@@ -37,8 +41,12 @@ Route::get('/analytics', function () {
 });
 
 // Preview page (builder preview)
+Route::get('/preview', function () {
+    $surveyId = request('survey');
+    return view('preview', ['surveyId' => $surveyId]);
+});
+
 Route::get('/preview/{survey}', function (\App\Models\Survey $survey) {
-    abort_unless($survey->is_active, 404);
     return view('preview', ['surveyId' => $survey->id]);
 });
 

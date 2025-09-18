@@ -27,11 +27,11 @@ class SurveyController extends Controller
             \Log::info('Survey store request received', ['data' => $request->all()]);
             
             $data = $request->validate([
-                'title' => 'required|string|max:255|unique:surveys,title',
+                'title' => 'required|string|max:255',
                 'description' => 'nullable|string|max:1000',
                 'type' => 'required|in:survey,quiz',
                 'is_published' => 'boolean',
-                'questions' => 'required|array|min:1'
+                'questions' => 'array'
             ]);
 
             return DB::transaction(function () use ($data) {
@@ -42,7 +42,7 @@ class SurveyController extends Controller
                     'is_published' => $data['is_published'] ?? false,
                 ]);
 
-                if (!empty($data['questions'])) {
+                if (isset($data['questions']) && !empty($data['questions'])) {
                     $this->syncQuestions($survey, $data['questions']);
                 }
                 
@@ -61,7 +61,7 @@ class SurveyController extends Controller
     {
         try {
             $data = $request->validate([
-                'title' => 'required|string|unique:surveys,title,' . $survey->id,
+                'title' => 'required|string|max:255',
                 'description' => 'nullable|string',
                 'type' => 'required|in:survey,quiz',
                 'is_published' => 'boolean',

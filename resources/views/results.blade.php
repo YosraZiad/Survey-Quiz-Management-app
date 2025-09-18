@@ -49,7 +49,10 @@
 <body>
 	<div class="results-container">
 		<div class="results-header">
-			<h1 class="results-title" id="surveyTitle">Survey Results</h1>
+			<div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+				<button onclick="history.back()" class="btn" style="background: #6b7280; color: white; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer;">← Back</button>
+				<h1 class="results-title" id="surveyTitle">Survey Results</h1>
+			</div>
 			<p class="results-subtitle" id="surveySubtitle">Thank you for completing the survey</p>
 		</div>
 

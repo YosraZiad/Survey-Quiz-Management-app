@@ -19,7 +19,7 @@
 			<nav class="menu">
 				<a class="menu-item active" href="{{ url('/dashboard') }}">Dashboard</a>
 				<a class="menu-item" href="{{ url('/') }}">Survey Builder</a>
-				<a class="menu-item" href="{{ url('/responses') }}">View Responses</a>
+				<a class="menu-item" href="{{ url('/surveys') }}">⚙️ <span>Manage Surveys</span></a>
 				<!-- <a class="menu-item" href="{{ url('/analytics') }}">Analytics</a>
 				<a class="menu-item" href="#">User Management</a> -->
 			</nav>
