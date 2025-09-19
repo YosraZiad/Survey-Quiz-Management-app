@@ -9,6 +9,7 @@
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 	<link rel="stylesheet" href="{{ asset('assets/css/responses.css') }}">
 	<link rel="stylesheet" href="{{ asset('assets/css/analytics.css') }}">
+	<script src="{{ asset('assets/js/toast.js') }}"></script>
 	<style>
 		.icon-btn {
 			background: #f3f4f6;
@@ -76,7 +77,7 @@
 						</div>
 						
 						<button id="generateAnalysis" class="btn primary" style="display: none; padding: 10px 20px; border-radius: 8px;">🔍 Generate Analysis</button>
-						<button id="testWithSampleData" class="btn" style="display: none; background: #f59e0b; color: white; margin-left: 10px; padding: 10px 20px; border-radius: 8px;">🧪 Test with Sample Data</button>
+						<!-- <button id="testWithSampleData" class="btn" style="display: none; background: #f59e0b; color: white; margin-left: 10px; padding: 10px 20px; border-radius: 8px;">🧪 Test with Sample Data</button> -->
 					</div>
 
 					<!-- Analysis Results - Integrated inside filter section -->
@@ -454,7 +455,11 @@
 	window.viewResponse = function(surveyId, respondentId) {
 		if (!surveyId || !respondentId) {
 			console.error('Invalid survey or respondent ID');
-			alert('Unable to view response details. Missing required information.');
+			if (typeof window.toast !== 'undefined') {
+				window.toast.error('Unable to view response details. Missing required information.');
+			} else {
+				alert('Unable to view response details. Missing required information.');
+			}
 			return;
 		}
 		window.location.href = `/response-detail/${surveyId}?respondent=${respondentId}`;
@@ -463,7 +468,11 @@
 	// Export all data to CSV
 	function exportAllData() {
 		if (filteredResponses.length === 0) {
-			alert('No data available to export');
+			if (typeof window.toast !== 'undefined') {
+				window.toast.warning('No data available to export');
+			} else {
+				alert('No data available to export');
+			}
 			return;
 		}
 
@@ -515,7 +524,11 @@
 	// Function to export survey data
 	function exportSurveyData() {
 		if (filteredResponses.length === 0) {
-			alert('No data available to export');
+			if (typeof window.toast !== 'undefined') {
+				window.toast.warning('No data available to export');
+			} else {
+				alert('No data available to export');
+			}
 			return;
 		}
 

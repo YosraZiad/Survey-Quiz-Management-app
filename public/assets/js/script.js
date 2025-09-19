@@ -1163,7 +1163,11 @@ function buildSurveyPayload(title, description, questionsArray) {
 
 // CSV Format Help
 function showCSVHelp() {
-    alert(`CSV Format:\nQuestion Title, Question Type, Option1, Option2, Option3...\n\nExample:\n"What is your name?", "short"\n"Choose your age", "radio", "18-25", "26-35", "36-45"\n"Select hobbies", "checkbox", "Reading", "Sports", "Music"\n\nSupported Types: short, long, radio, checkbox, dropdown, rating, date, number`);
+    if (typeof window.toast !== 'undefined') {
+        window.toast.info(`CSV Format Guide:\n• Question Title, Question Type, Option1, Option2...\n• Example: "What is your name?", "short"\n• Types: short, long, radio, checkbox, dropdown, rating, date, number`, 8000);
+    } else {
+        alert(`CSV Format:\nQuestion Title, Question Type, Option1, Option2, Option3...\n\nExample:\n"What is your name?", "short"\n"Choose your age", "radio", "18-25", "26-35", "36-45"\n"Select hobbies", "checkbox", "Reading", "Sports", "Music"\n\nSupported Types: short, long, radio, checkbox, dropdown, rating, date, number`);
+    }
 }
 
 // Update preview function

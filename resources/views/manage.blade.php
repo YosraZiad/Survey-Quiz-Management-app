@@ -781,7 +781,7 @@
 							<span>▼</span>
 						</button>
 						<div class="dropdown-menu" id="dropdown-${survey.id}">
-							<a class="dropdown-item" href="/?survey=${survey.id}">
+							<a class="dropdown-item" href="/edit/${survey.id}">
 								<span>✏️</span> Edit
 							</a>
 							${survey.is_active ? `

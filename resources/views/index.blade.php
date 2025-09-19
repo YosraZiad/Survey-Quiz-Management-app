@@ -370,17 +370,114 @@
 	</script>
 	<script src="{{ asset('assets/js/script.js') }}"></script>
 	<script>
+		// Survey ID for editing
+		const editingSurveyId = {{ $surveyId ?? 'null' }};
+		
 		// Handle survey type selection
 		document.addEventListener('DOMContentLoaded', function() {
 			const surveyTypeInputs = document.querySelectorAll('input[name="surveyType"]');
 			
 			// Survey type inputs are handled by the existing logic
 			
+			// Load existing survey if editing
+			if (editingSurveyId && editingSurveyId !== null) {
+				loadExistingSurvey(editingSurveyId);
+			}
+			
 			// Setup CSV import with delay to ensure script.js is loaded
 			setTimeout(() => {
 				setupCSVImport();
 			}, 100);
 		});
+
+		// Load existing survey for editing
+		async function loadExistingSurvey(surveyId) {
+			try {
+				console.log('Loading survey for editing:', surveyId);
+				
+				const response = await fetch(`/api/surveys/${surveyId}`);
+				if (!response.ok) {
+					throw new Error(`HTTP ${response.status}`);
+				}
+				
+				const data = await response.json();
+				const survey = data.survey || data;
+				
+				console.log('Loaded survey data:', survey);
+				
+				// Update survey title and description
+				if (survey.title) {
+					document.getElementById('surveyTitle').value = survey.title;
+				}
+				if (survey.description) {
+					document.getElementById('surveyDesc').value = survey.description;
+				}
+				
+				// Update survey type
+				if (survey.type) {
+					const typeRadio = document.querySelector(`input[name="surveyType"][value="${survey.type}"]`);
+					if (typeRadio) {
+						typeRadio.checked = true;
+						// Trigger change event to update UI
+						typeRadio.dispatchEvent(new Event('change'));
+					}
+				}
+				
+				// Load questions
+				if (survey.questions && survey.questions.length > 0) {
+					// Clear existing questions
+					window.questions = [];
+					
+					// Add questions from database
+					survey.questions.forEach(question => {
+						const q = {
+							id: question.id || Date.now() + Math.random(),
+							title: question.title || question.question_text,
+							type: question.type || question.question_type,
+							required: question.required || false,
+							description: question.description || '',
+							options: []
+						};
+						
+						// Add options if they exist
+						if (question.options && question.options.length > 0) {
+							q.options = question.options.map(opt => opt.option_text || opt.text || opt);
+						}
+						
+						// Add weights/points if they exist
+						if (survey.type === 'quiz' && question.points) {
+							q.points = question.points;
+						} else if (question.weights) {
+							q.weights = question.weights;
+						}
+						
+						window.questions.push(q);
+					});
+					
+					// Render questions
+					if (typeof renderQuestions === 'function') {
+						renderQuestions();
+					} else if (typeof manuallyRenderQuestions === 'function') {
+						manuallyRenderQuestions();
+					}
+					
+					// Update stats
+					if (typeof updateSurveyStats === 'function') {
+						updateSurveyStats();
+					}
+				}
+				
+				if (typeof window.toast !== 'undefined') {
+					window.toast.success(`Survey "${survey.title}" loaded for editing`);
+				}
+				
+			} catch (error) {
+				console.error('Error loading survey:', error);
+				if (typeof window.toast !== 'undefined') {
+					window.toast.error('Failed to load survey for editing');
+				}
+			}
+		}
 		
 		function setupCSVImport() {
 			const importForm = document.getElementById('csvImportForm');
@@ -391,7 +488,11 @@
 					
 					const fileInput = document.getElementById('csvFile');
 					if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-						alert('Choose a CSV file');
+						if (typeof window.toast !== 'undefined') {
+							window.toast.warning('Please choose a CSV file');
+						} else {
+							alert('Choose a CSV file');
+						}
 						return;
 					}
 					
@@ -423,8 +524,12 @@
 						});
 						
 						if (duplicates.length > 0) {
-							const proceed = confirm(`Found ${duplicates.length} questions that already exist:\n${duplicates.join('\n')}\n\nDo you want to import the remaining questions and skip duplicates?`);
-							if (!proceed) return;
+							// Show toast notification for duplicates
+							if (typeof window.toast !== 'undefined') {
+								window.toast.warning(`Found ${duplicates.length} duplicate questions. Skipping duplicates and importing new questions only.`, 6000);
+							} else {
+								alert(`Found ${duplicates.length} questions that already exist. Skipping duplicates.`);
+							}
 						}
 						
 						const imported = [];
@@ -509,7 +614,11 @@
 						`Successfully imported ${imported.length} questions from CSV (${skipped} duplicates skipped). You can now drag questions to reorder them.` :
 						`Successfully imported ${imported.length} questions from CSV. You can now drag questions to reorder them.`;
 					
-					alert(message);
+					if (typeof window.toast !== 'undefined') {
+						window.toast.success(message, 5000);
+					} else {
+						alert(message);
+					}
 					fileInput.value = '';
 					
 					try {
@@ -530,7 +639,11 @@
 				}
 			} catch (err) {
 				console.error('CSV Import error:', err);
-				alert('CSV Import error: ' + err.message);
+				if (typeof window.toast !== 'undefined') {
+					window.toast.error('CSV Import error: ' + err.message);
+				} else {
+					alert('CSV Import error: ' + err.message);
+				}
 			}
 		});
 	} else {

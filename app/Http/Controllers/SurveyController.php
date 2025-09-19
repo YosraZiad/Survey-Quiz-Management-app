@@ -18,7 +18,9 @@ class SurveyController extends Controller
 
     public function show(Survey $survey)
     {
-        return response()->json($survey->load('questions.options'));
+        return response()->json($survey->load(['questions' => function($query) {
+            $query->orderBy('display_order')->with('options');
+        }]));
     }
 
     public function store(Request $request)
@@ -101,7 +103,10 @@ class SurveyController extends Controller
     public function publish(Survey $survey)
     {
         try {
-            $survey->update(['is_published' => true]);
+            $survey->update([
+                'is_published' => true,
+                'is_active' => true
+            ]);
             return response()->json(['message' => 'Survey published successfully', 'survey' => $survey]);
         } catch (\Exception $e) {
             \Log::error('Survey publish error: ' . $e->getMessage());

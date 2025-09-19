@@ -3,6 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="csrf-token" content="{{ csrf_token() }}">
 	<title>Survey Preview</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -310,10 +311,14 @@
 				<button onclick="history.back()" class="btn" style="background: #6b7280; color: white;">← Back</button>
 				<h1>Survey Preview</h1>
 			</div>
-			<div class="share" style="display: flex; align-items: center; gap: 8px;">
-				<input type="text" id="shareUrl" class="input" placeholder="Survey URL will appear here after publishing" readonly style="display: none; min-width: 300px;">
-				<button class="btn" id="copyBtn" onclick="copyShareUrl()" style="display: none; background: #10b981; color: white;">📋 Copy</button>
-				<button class="btn primary" id="publishBtn">🚀 Publish</button>
+			<div class="share" style="display: flex; gap: 12px; align-items: center;">
+				<input class="input" id="shareUrl" readonly placeholder="Survey link will appear here after publishing..." style="min-width: 350px;">
+				<button class="btn primary" id="publishBtn" onclick="publishSurvey()" style="background: #3b82f6; color: white; padding: 10px 16px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600;">
+					🚀 Publish
+				</button>
+				<button class="btn" id="copyBtn" onclick="copyToClipboard()" style="background: #10b981; color: white; padding: 10px 16px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; display: none;" title="Copy Link">
+					📋 Copy
+				</button>
 			</div>
 		</div>
 		<div id="previewRoot"></div>
@@ -430,6 +435,135 @@
 				document.execCommand('copy');
 				window.toast.success('Link copied to clipboard!');
 			});
+		}
+	}
+
+	// Publish Survey Function
+	async function publishSurvey() {
+		console.log('Publishing survey with ID:', surveyId);
+		
+		if (!surveyId || surveyId === null || surveyId === 'null') {
+			if (typeof window.toast !== 'undefined') {
+				window.toast.error('No survey to publish. Please save your survey first.');
+			}
+			return;
+		}
+
+		// Disable button during publishing
+		const publishBtn = document.getElementById('publishBtn');
+		const originalText = publishBtn.innerHTML;
+		publishBtn.disabled = true;
+		publishBtn.innerHTML = '⏳ Publishing...';
+
+		try {
+			if (typeof window.toast !== 'undefined') {
+				window.toast.info('Publishing survey...', 3000);
+			}
+			
+			const response = await fetch(`/api/surveys/${surveyId}/publish`, {
+				method: 'POST',
+				headers: {
+					'Accept': 'application/json',
+					'Content-Type': 'application/json',
+					'X-Requested-With': 'XMLHttpRequest',
+					'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+				}
+			});
+
+			console.log('Publish response status:', response.status);
+
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({}));
+				console.error('Publish error data:', errorData);
+				throw new Error(errorData.message || errorData.error || `HTTP ${response.status}`);
+			}
+
+			const data = await response.json();
+			console.log('Publish success data:', data);
+			
+			// Generate the public survey link
+			const publicLink = `${window.location.origin}/s/${surveyId}`;
+			
+			// Update the input field
+			const shareUrl = document.getElementById('shareUrl');
+			shareUrl.value = publicLink;
+			
+			// Show copy button
+			const copyBtn = document.getElementById('copyBtn');
+			copyBtn.style.display = 'inline-block';
+			
+			// Update button text
+			publishBtn.innerHTML = '✅ Published';
+			publishBtn.style.background = '#10b981';
+			
+			if (typeof window.toast !== 'undefined') {
+				window.toast.success('🎉 Survey published successfully! Link is ready to share.');
+			}
+			
+		} catch (error) {
+			console.error('Publish error:', error);
+			if (typeof window.toast !== 'undefined') {
+				window.toast.error(`Failed to publish survey: ${error.message}`);
+			}
+			
+			// Reset button
+			publishBtn.innerHTML = originalText;
+			publishBtn.disabled = false;
+		}
+	}
+
+	// Copy to Clipboard Function
+	async function copyToClipboard() {
+		const shareUrl = document.getElementById('shareUrl');
+		const link = shareUrl.value;
+		
+		if (!link) {
+			if (typeof window.toast !== 'undefined') {
+				window.toast.warning('No link to copy. Please publish the survey first.');
+			}
+			return;
+		}
+
+		// Visual feedback
+		const copyBtn = document.getElementById('copyBtn');
+		const originalText = copyBtn.innerHTML;
+		copyBtn.innerHTML = '⏳ Copying...';
+		copyBtn.disabled = true;
+
+		try {
+			// Modern clipboard API
+			if (navigator.clipboard && window.isSecureContext) {
+				await navigator.clipboard.writeText(link);
+			} else {
+				// Fallback for older browsers
+				shareUrl.select();
+				shareUrl.setSelectionRange(0, 99999); // For mobile devices
+				document.execCommand('copy');
+			}
+			
+			// Success feedback
+			copyBtn.innerHTML = '✅ Copied!';
+			copyBtn.style.background = '#059669';
+			if (typeof window.toast !== 'undefined') {
+				window.toast.success('📋 Link copied to clipboard!');
+			}
+			
+			// Reset button after 2 seconds
+			setTimeout(() => {
+				copyBtn.innerHTML = originalText;
+				copyBtn.style.background = '#10b981';
+				copyBtn.disabled = false;
+			}, 2000);
+			
+		} catch (error) {
+			console.error('Copy failed:', error);
+			if (typeof window.toast !== 'undefined') {
+				window.toast.error('Failed to copy link. Please copy manually.');
+			}
+			
+			// Reset button
+			copyBtn.innerHTML = originalText;
+			copyBtn.disabled = false;
 		}
 	}
 

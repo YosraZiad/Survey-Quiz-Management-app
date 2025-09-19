@@ -15,7 +15,12 @@ use Illuminate\Support\Facades\Route;
 
 // All routes are now public (no authentication required)
 Route::get('/', function () {
-    return view('index');
+    $surveyId = request('survey');
+    return view('index', ['surveyId' => $surveyId]);
+});
+
+Route::get('/edit/{survey}', function (\App\Models\Survey $survey) {
+    return view('index', ['surveyId' => $survey->id, 'survey' => $survey]);
 });
 
 Route::get('/responses', function () {

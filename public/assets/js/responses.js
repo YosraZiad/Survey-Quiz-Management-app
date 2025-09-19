@@ -1,4 +1,8 @@
 document.getElementById('exportBtn')?.addEventListener('click', () => {
-	alert('Exporting responses...');
+	if (typeof window.toast !== 'undefined') {
+		window.toast.info('Exporting responses...');
+	} else {
+		alert('Exporting responses...');
+	}
 });
 
