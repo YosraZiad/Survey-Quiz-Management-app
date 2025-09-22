@@ -486,6 +486,10 @@ function generateCSV() {
 function viewResponse(id) {
 	const response = mockResponses.find(r => r.id === id);
 	if (response) {
-		alert(`Response Details:\nName: ${response.name}\nEmail: ${response.email}\nScore: ${response.score}\nResponses: ${JSON.stringify(response.responses)}`);
+		if (typeof window.toast !== 'undefined') {
+			window.toast.info(`Response Details:\nName: ${response.name}\nEmail: ${response.email}\nScore: ${response.score}`, 5000);
+		} else {
+			alert(`Response Details:\nName: ${response.name}\nEmail: ${response.email}\nScore: ${response.score}\nResponses: ${JSON.stringify(response.responses)}`);
+		}
 	}
 }

@@ -18,7 +18,9 @@ class SurveyController extends Controller
 
     public function show(Survey $survey)
     {
-        return response()->json($survey->load('questions.options'));
+        return response()->json($survey->load(['questions' => function($query) {
+            $query->orderBy('display_order')->with('options');
+        }]));
     }
 
     public function store(Request $request)
@@ -27,11 +29,11 @@ class SurveyController extends Controller
             \Log::info('Survey store request received', ['data' => $request->all()]);
             
             $data = $request->validate([
-                'title' => 'required|string|max:255|unique:surveys,title',
+                'title' => 'required|string|max:255',
                 'description' => 'nullable|string|max:1000',
                 'type' => 'required|in:survey,quiz',
                 'is_published' => 'boolean',
-                'questions' => 'required|array|min:1'
+                'questions' => 'array'
             ]);
 
             return DB::transaction(function () use ($data) {
@@ -42,7 +44,7 @@ class SurveyController extends Controller
                     'is_published' => $data['is_published'] ?? false,
                 ]);
 
-                if (!empty($data['questions'])) {
+                if (isset($data['questions']) && !empty($data['questions'])) {
                     $this->syncQuestions($survey, $data['questions']);
                 }
                 
@@ -61,7 +63,7 @@ class SurveyController extends Controller
     {
         try {
             $data = $request->validate([
-                'title' => 'required|string|unique:surveys,title,' . $survey->id,
+                'title' => 'required|string|max:255',
                 'description' => 'nullable|string',
                 'type' => 'required|in:survey,quiz',
                 'is_published' => 'boolean',
@@ -101,7 +103,10 @@ class SurveyController extends Controller
     public function publish(Survey $survey)
     {
         try {
-            $survey->update(['is_published' => true]);
+            $survey->update([
+                'is_published' => true,
+                'is_active' => true
+            ]);
             return response()->json(['message' => 'Survey published successfully', 'survey' => $survey]);
         } catch (\Exception $e) {
             \Log::error('Survey publish error: ' . $e->getMessage());

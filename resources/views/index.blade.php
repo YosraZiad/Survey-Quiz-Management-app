@@ -20,7 +20,7 @@
 			<nav class="menu">
 				<a class="menu-item" href="{{ url('/dashboard') }}">📊 <span>Dashboard</span></a>
 				<a class="menu-item active" href="{{ url('/') }}">📝 <span>Survey Builder</span></a>
-				<a class="menu-item" href="{{ url('/responses') }}">👁️ <span>View Responses</span></a>
+				<a class="menu-item" href="{{ url('/surveys') }}">⚙️ <span>Manage Surveys</span></a>
 				<!-- <a class="menu-item" href="#">📈 <span>Analytics</span></a>
 				<a class="menu-item" href="#">👥 <span>User Management</span></a> -->
 			</nav>
@@ -86,14 +86,6 @@
 							<div class="type-desc">Test knowledge with correct answers</div>
 						</span>
 					</label>
-					<label class="type-option">
-						<input type="radio" name="surveyType" value="manage">
-						<span class="type-card">
-							<div class="type-icon">⚙️</div>
-							<div class="type-title">Manage Surveys</div>
-							<div class="type-desc">View and manage existing surveys</div>
-						</span>
-					</label>
 				</div>
 				<input class="survey-title" id="surveyTitle" value="New Survey" />
 				<input class="survey-desc" id="surveyDesc" value="Survey description" />
@@ -115,26 +107,377 @@
 		</main>
 	</div>
 
+	<script>
+	// Toast Notification System - Initialize first
+	class ToastManager {
+		constructor() {
+			this.container = null;
+			this.init();
+		}
+
+		init() {
+			this.container = document.createElement('div');
+			this.container.id = 'toast-container';
+			this.container.style.cssText = `
+				position: fixed;
+				top: 20px;
+				right: 20px;
+				z-index: 10000;
+				display: flex;
+				flex-direction: column;
+				gap: 10px;
+				max-width: 400px;
+			`;
+			document.body.appendChild(this.container);
+		}
+
+		show(message, type = 'info', duration = 4000) {
+			const toast = document.createElement('div');
+			toast.className = `toast toast-${type}`;
+			
+			const baseStyles = `
+				padding: 16px 20px;
+				border-radius: 12px;
+				color: white;
+				font-weight: 500;
+				box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+				backdrop-filter: blur(10px);
+				transform: translateX(100%);
+				transition: all 0.3s ease;
+				cursor: pointer;
+				position: relative;
+				overflow: hidden;
+				min-width: 300px;
+			`;
+
+			let typeStyles = '';
+			switch (type) {
+				case 'success':
+					typeStyles = 'background: linear-gradient(135deg, #10b981 0%, #059669 100%);';
+					break;
+				case 'error':
+					typeStyles = 'background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);';
+					break;
+				case 'warning':
+					typeStyles = 'background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);';
+					break;
+				case 'info':
+				default:
+					typeStyles = 'background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);';
+					break;
+			}
+
+			toast.style.cssText = baseStyles + typeStyles;
+			
+			let icon = '';
+			switch (type) {
+				case 'success': icon = '✅'; break;
+				case 'error': icon = '❌'; break;
+				case 'warning': icon = '⚠️'; break;
+				case 'info': icon = 'ℹ️'; break;
+			}
+
+			toast.innerHTML = `
+				<div style="display: flex; align-items: center; gap: 10px;">
+					<span style="font-size: 18px;">${icon}</span>
+					<span>${message}</span>
+					<span style="margin-left: auto; font-size: 20px; cursor: pointer; opacity: 0.7;" onclick="this.parentElement.parentElement.remove()">×</span>
+				</div>
+			`;
+
+			this.container.appendChild(toast);
+
+			setTimeout(() => {
+				toast.style.transform = 'translateX(0)';
+			}, 10);
+
+			setTimeout(() => {
+				this.remove(toast);
+			}, duration);
+
+			toast.addEventListener('click', () => {
+				this.remove(toast);
+			});
+
+			return toast;
+		}
+
+		remove(toast) {
+			if (toast && toast.parentElement) {
+				toast.style.transform = 'translateX(100%)';
+				toast.style.opacity = '0';
+				setTimeout(() => {
+					if (toast.parentElement) {
+						toast.parentElement.removeChild(toast);
+					}
+				}, 300);
+			}
+		}
+
+		success(message, duration = 4000) {
+			return this.show(message, 'success', duration);
+		}
+
+		error(message, duration = 5000) {
+			return this.show(message, 'error', duration);
+		}
+
+		warning(message, duration = 4500) {
+			return this.show(message, 'warning', duration);
+		}
+
+		info(message, duration = 4000) {
+			return this.show(message, 'info', duration);
+		}
+	}
+
+	// Confirmation Dialog System
+	class ConfirmDialog {
+		static show(message, title = 'Confirm Action', options = {}) {
+			return new Promise((resolve) => {
+				const overlay = document.createElement('div');
+				overlay.style.cssText = `
+					position: fixed;
+					top: 0;
+					left: 0;
+					width: 100%;
+					height: 100%;
+					background: rgba(0, 0, 0, 0.5);
+					backdrop-filter: blur(5px);
+					z-index: 10001;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					opacity: 0;
+					transition: opacity 0.3s ease;
+				`;
+
+				const dialog = document.createElement('div');
+				dialog.style.cssText = `
+					background: white;
+					border-radius: 16px;
+					padding: 30px;
+					max-width: 450px;
+					width: 90%;
+					box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+					transform: scale(0.9);
+					transition: transform 0.3s ease;
+				`;
+
+				const confirmText = options.confirmText || 'Confirm';
+				const cancelText = options.cancelText || 'Cancel';
+				const type = options.type || 'warning';
+
+				let icon = '';
+				let iconColor = '';
+				switch (type) {
+					case 'danger':
+						icon = '🗑️';
+						iconColor = '#ef4444';
+						break;
+					case 'warning':
+						icon = '⚠️';
+						iconColor = '#f59e0b';
+						break;
+					case 'info':
+						icon = 'ℹ️';
+						iconColor = '#3b82f6';
+						break;
+					case 'publish':
+						icon = '🚀';
+						iconColor = '#10b981';
+						break;
+				}
+
+				dialog.innerHTML = `
+					<div style="text-align: center; margin-bottom: 25px;">
+						<div style="font-size: 48px; margin-bottom: 15px;">${icon}</div>
+						<h3 style="margin: 0 0 10px 0; color: #1f2937; font-size: 20px;">${title}</h3>
+						<p style="margin: 0; color: #6b7280; line-height: 1.5;">${message}</p>
+					</div>
+					<div style="display: flex; gap: 12px; justify-content: center;">
+						<button id="cancelBtn" style="
+							padding: 12px 24px;
+							border: 2px solid #e5e7eb;
+							background: white;
+							color: #374151;
+							border-radius: 8px;
+							font-weight: 600;
+							cursor: pointer;
+							transition: all 0.2s ease;
+							min-width: 100px;
+						">${cancelText}</button>
+						<button id="confirmBtn" style="
+							padding: 12px 24px;
+							border: none;
+							background: ${iconColor};
+							color: white;
+							border-radius: 8px;
+							font-weight: 600;
+							cursor: pointer;
+							transition: all 0.2s ease;
+							min-width: 100px;
+						">${confirmText}</button>
+					</div>
+				`;
+
+				overlay.appendChild(dialog);
+				document.body.appendChild(overlay);
+
+				setTimeout(() => {
+					overlay.style.opacity = '1';
+					dialog.style.transform = 'scale(1)';
+				}, 10);
+
+				const confirmBtn = dialog.querySelector('#confirmBtn');
+				const cancelBtn = dialog.querySelector('#cancelBtn');
+
+				const cleanup = () => {
+					overlay.style.opacity = '0';
+					dialog.style.transform = 'scale(0.9)';
+					setTimeout(() => {
+						if (overlay.parentElement) {
+							overlay.parentElement.removeChild(overlay);
+						}
+					}, 300);
+				};
+
+				confirmBtn.addEventListener('click', () => {
+					cleanup();
+					resolve(true);
+				});
+
+				cancelBtn.addEventListener('click', () => {
+					cleanup();
+					resolve(false);
+				});
+
+				overlay.addEventListener('click', (e) => {
+					if (e.target === overlay) {
+						cleanup();
+						resolve(false);
+					}
+				});
+			});
+		}
+	}
+
+	// Initialize global instances immediately
+	window.toast = new ToastManager();
+	window.confirmDialog = ConfirmDialog;
+	
+	console.log('Toast system initialized');
+	</script>
 	<script src="{{ asset('assets/js/script.js') }}"></script>
 	<script>
+		// Survey ID for editing
+		const editingSurveyId = {{ $surveyId ?? 'null' }};
+		
 		// Handle survey type selection
 		document.addEventListener('DOMContentLoaded', function() {
 			const surveyTypeInputs = document.querySelectorAll('input[name="surveyType"]');
 			
-			surveyTypeInputs.forEach(input => {
-				input.addEventListener('change', function() {
-					if (this.value === 'manage') {
-						// Redirect to manage surveys page
-						window.location.href = '{{ url("/surveys") }}';
-					}
-				});
-			});
+			// Survey type inputs are handled by the existing logic
+			
+			// Load existing survey if editing
+			if (editingSurveyId && editingSurveyId !== null) {
+				loadExistingSurvey(editingSurveyId);
+			}
 			
 			// Setup CSV import with delay to ensure script.js is loaded
 			setTimeout(() => {
 				setupCSVImport();
 			}, 100);
 		});
+
+		// Load existing survey for editing
+		async function loadExistingSurvey(surveyId) {
+			try {
+				console.log('Loading survey for editing:', surveyId);
+				
+				const response = await fetch(`/api/surveys/${surveyId}`);
+				if (!response.ok) {
+					throw new Error(`HTTP ${response.status}`);
+				}
+				
+				const data = await response.json();
+				const survey = data.survey || data;
+				
+				console.log('Loaded survey data:', survey);
+				
+				// Update survey title and description
+				if (survey.title) {
+					document.getElementById('surveyTitle').value = survey.title;
+				}
+				if (survey.description) {
+					document.getElementById('surveyDesc').value = survey.description;
+				}
+				
+				// Update survey type
+				if (survey.type) {
+					const typeRadio = document.querySelector(`input[name="surveyType"][value="${survey.type}"]`);
+					if (typeRadio) {
+						typeRadio.checked = true;
+						// Trigger change event to update UI
+						typeRadio.dispatchEvent(new Event('change'));
+					}
+				}
+				
+				// Load questions
+				if (survey.questions && survey.questions.length > 0) {
+					// Clear existing questions
+					window.questions = [];
+					
+					// Add questions from database
+					survey.questions.forEach(question => {
+						const q = {
+							id: question.id || Date.now() + Math.random(),
+							title: question.title || question.question_text,
+							type: question.type || question.question_type,
+							required: question.required || false,
+							description: question.description || '',
+							options: []
+						};
+						
+						// Add options if they exist
+						if (question.options && question.options.length > 0) {
+							q.options = question.options.map(opt => opt.option_text || opt.text || opt);
+						}
+						
+						// Add weights/points if they exist
+						if (survey.type === 'quiz' && question.points) {
+							q.points = question.points;
+						} else if (question.weights) {
+							q.weights = question.weights;
+						}
+						
+						window.questions.push(q);
+					});
+					
+					// Render questions
+					if (typeof renderQuestions === 'function') {
+						renderQuestions();
+					} else if (typeof manuallyRenderQuestions === 'function') {
+						manuallyRenderQuestions();
+					}
+					
+					// Update stats
+					if (typeof updateSurveyStats === 'function') {
+						updateSurveyStats();
+					}
+				}
+				
+				if (typeof window.toast !== 'undefined') {
+					window.toast.success(`Survey "${survey.title}" loaded for editing`);
+				}
+				
+			} catch (error) {
+				console.error('Error loading survey:', error);
+				if (typeof window.toast !== 'undefined') {
+					window.toast.error('Failed to load survey for editing');
+				}
+			}
+		}
 		
 		function setupCSVImport() {
 			const importForm = document.getElementById('csvImportForm');
@@ -145,7 +488,11 @@
 					
 					const fileInput = document.getElementById('csvFile');
 					if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-						alert('Choose a CSV file');
+						if (typeof window.toast !== 'undefined') {
+							window.toast.warning('Please choose a CSV file');
+						} else {
+							alert('Choose a CSV file');
+						}
 						return;
 					}
 					
@@ -177,8 +524,12 @@
 						});
 						
 						if (duplicates.length > 0) {
-							const proceed = confirm(`Found ${duplicates.length} questions that already exist:\n${duplicates.join('\n')}\n\nDo you want to import the remaining questions and skip duplicates?`);
-							if (!proceed) return;
+							// Show toast notification for duplicates
+							if (typeof window.toast !== 'undefined') {
+								window.toast.warning(`Found ${duplicates.length} duplicate questions. Skipping duplicates and importing new questions only.`, 6000);
+							} else {
+								alert(`Found ${duplicates.length} questions that already exist. Skipping duplicates.`);
+							}
 						}
 						
 						const imported = [];
@@ -263,7 +614,11 @@
 						`Successfully imported ${imported.length} questions from CSV (${skipped} duplicates skipped). You can now drag questions to reorder them.` :
 						`Successfully imported ${imported.length} questions from CSV. You can now drag questions to reorder them.`;
 					
-					alert(message);
+					if (typeof window.toast !== 'undefined') {
+						window.toast.success(message, 5000);
+					} else {
+						alert(message);
+					}
 					fileInput.value = '';
 					
 					try {
@@ -284,7 +639,11 @@
 				}
 			} catch (err) {
 				console.error('CSV Import error:', err);
-				alert('CSV Import error: ' + err.message);
+				if (typeof window.toast !== 'undefined') {
+					window.toast.error('CSV Import error: ' + err.message);
+				} else {
+					alert('CSV Import error: ' + err.message);
+				}
 			}
 		});
 	} else {
